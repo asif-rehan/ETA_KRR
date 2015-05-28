@@ -34,14 +34,15 @@ def get_line_graph(prim_gr):
 
 def mk_dist_matrix(trans_graph):
     d = nx.shortest_path_length(trans_graph)
-                
     idseq = [int(key[2]) for key in d.keys()]
     mapping = dict(zip(d.keys(), idseq))
     dist_mat = dict_to_numpy_array(d, mapping=mapping)
-    for i in range(len(d)):
-        for j in range(len(d)):
-            if i != j and dist_mat[i][j] == 0 :
-                dist_mat[i][j] = np.inf
+    #==========================================================================
+    # for i in range(len(d)):
+    #     for j in range(len(d)):
+    #         if i != j and dist_mat[i][j] == 0 :
+    #             dist_mat[i][j] = np.inf
+    #==========================================================================
     return dist_mat
 
 #==============================================================================
