@@ -22,6 +22,7 @@ n_road = 177
 speed_storage = {}
 for i in xrange(n_road):
     speed_storage[i] = []
+speed_vector = np.zeros((1,n_road))
 
 for (v, e) in nd_rd_pair_files:
     node_f = pd.read_csv(os.path.join(src_fldr, 'node_files', v),
@@ -43,7 +44,7 @@ for (v, e) in nd_rd_pair_files:
                 road_f.speed[idx] = avg_speed
     for idx in road_f[road_f.speed!=''].index:
         speed_storage[road_f.road_id[idx]].append(road_f.speed[idx])
-pickle.dump(speed_storage, open(os.path.join(src_fldr, '..','speed_storage.p'),
-                                'rb'))
+pickle.dump(speed_storage, open('speed_storage.p','wb'))
 for i in xrange(n_road):
-    np.mean(np.array(speed_storage[i]))
+    speed_vector[0][i] = np.mean(np.array(speed_storage[i]))
+pickle.dump(speed_storage, open('speed_vector.p','wb'))    
