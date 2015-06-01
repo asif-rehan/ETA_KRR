@@ -1,7 +1,7 @@
 '''
 Created on May 27, 2015
 
-@author: asr13006
+@author: Asif.Rehan@engineer.uconn.edu
 '''
 import os
 import pandas as pd
@@ -42,8 +42,7 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road):
         road_f['ts_idx_next'] = ""
         road_f['ts_prev']     = ""
         road_f['ts_next']     = ""
-        del road_f['speed']
-        del road_f['ts_delta']
+
         
         ts_idx = node_f[node_f.timestamp != '0'].index
         delta_ts_ticks = zip(ts_idx[:-1], ts_idx[1:])
