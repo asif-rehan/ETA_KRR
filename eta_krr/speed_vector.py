@@ -9,6 +9,59 @@ import numpy as np
 import pickle
 from dateutil import parser
 
+
+def fill_non_static_data(node_f, road_f):
+    ts_idx = node_f[node_f['timestamp'] != '0'].index
+    delta_ts_ticks = zip(ts_idx[:-1], ts_idx[1:])
+    for ts_idx_prev, ts_idx_next in delta_ts_ticks:
+        includd_0_spd = road_f[ts_idx_prev:ts_idx_next]
+        excludd_0_spd = includd_0_spd[includd_0_spd.length != 0]
+        if len(excludd_0_spd.index) != 0:
+            ts_next = parser.parse(node_f.timestamp[ts_idx_next])
+            ts_prev = parser.parse(node_f.timestamp[ts_idx_prev])
+            ts_delta = ts_next - ts_prev
+            avg_speed = np.divide(excludd_0_spd.length.sum(), 
+                ts_delta.total_seconds())
+            for indx in excludd_0_spd.index:
+                road_f.set_value(indx, 'speed_mps', avg_speed)
+                road_f.set_value(indx, 'ts_delta_sec', ts_delta.total_seconds())
+                road_f.set_value(indx, 'ts_idx_prev', ts_idx_prev)
+                road_f.set_value(indx, 'ts_idx_next', ts_idx_next)
+                road_f.set_value(indx, 'ts_prev', ts_prev)
+                road_f.set_value(indx, 'ts_next', ts_next)
+    return road_f
+
+def fill_static_data(node_f, road_f):
+    static = road_f[road_f['length'] == 0]
+    for idx in static.index:
+        try:
+            ts_idx_next = idx+1 
+            ts_next = parser.parse(node_f.loc[ts_idx_next, 'timestamp'])
+        
+        except ValueError:
+            temp = node_f.loc[idx+2:]
+            valid_next = temp[temp.timestamp!='0'].head(1)
+            ts_idx_next = valid_next.index.values[0]
+            ts_next = parser.parse(valid_next.timestamp.values[0])
+
+        try:
+            ts_idx_prev = idx
+            ts_prev = parser.parse(node_f.loc[ts_idx_prev, 'timestamp'])
+        
+        except ValueError:
+            temp = node_f.loc[:idx]
+            valid_prev = temp[temp.timestamp!='0'].tail(1)
+            ts_idx_prev = valid_prev.index.values[0]
+            ts_prev = parser.parse(valid_prev.timestamp.values[0])
+        ts_delta = ts_next - ts_prev
+        road_f.set_value(idx, 'speed_mps', 0)
+        road_f.set_value(idx, 'ts_delta_sec', ts_delta.total_seconds())
+        road_f.set_value(idx, 'ts_idx_prev', ts_idx_prev)
+        road_f.set_value(idx, 'ts_idx_next', ts_idx_next)
+        road_f.set_value(idx, 'ts_prev', ts_prev)
+        road_f.set_value(idx, 'ts_next', ts_next)
+    return road_f
+
 def speed_vector(src_fldr, nd_rd_pair_files, n_road):
     """post-processing tool following map-matching.
     Works on map-matched node and road output
@@ -30,43 +83,26 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road):
         speed_storage[i] = []
     
     speed_vector = np.zeros((1, n_road))
-    for v, e in nd_rd_pair_files[2:]:
+    for v, e in nd_rd_pair_files:
         node_f = pd.read_csv(os.path.join(src_fldr, 'node_files', v), 
-            index_col=0, 
-            usecols=[0, 3, 4])
+                             index_col=0, usecols=[0, 3, 4])
         road_f = pd.read_csv(os.path.join(src_fldr, 'road_files', e), 
                              index_col=0)
-        road_f['speed_mps']       = ""
-        road_f['ts_delta_sec']    = ""
-        road_f['ts_idx_prev'] = ""
-        road_f['ts_idx_next'] = ""
-        road_f['ts_prev']     = ""
-        road_f['ts_next']     = ""
-
+        road_f['speed_mps']    = ""
+        road_f['ts_delta_sec'] = ""
+        road_f['ts_idx_prev']  = ""
+        road_f['ts_idx_next']  = ""
+        road_f['ts_prev']      = ""
+        road_f['ts_next']      = ""
         
-        ts_idx = node_f[node_f.timestamp != '0'].index
-        delta_ts_ticks = zip(ts_idx[:-1], ts_idx[1:])
-        for ts_idx_prev, ts_idx_next in delta_ts_ticks:
-            includd_0_spd = road_f[ts_idx_prev:ts_idx_next]
-            excludd_0_spd = includd_0_spd[includd_0_spd.length != 0]
-            if len(excludd_0_spd.index) != 0:
-                ts_next = parser.parse(node_f.timestamp[ts_idx_next])
-                ts_prev = parser.parse(node_f.timestamp[ts_idx_prev])
-                ts_delta = ts_next - ts_prev
-                avg_speed = np.divide(excludd_0_spd.length.sum(), 
-                    ts_delta.total_seconds())
-                for idx in excludd_0_spd.index:
-                    road_f.set_value(idx, 'speed_mps', avg_speed)
-                    road_f.set_value(idx, 'ts_delta_sec', 
-                                                    ts_delta.total_seconds())
-                    road_f.set_value(idx, 'ts_idx_prev', ts_idx_prev)
-                    road_f.set_value(idx, 'ts_idx_next', ts_idx_next)
-                    road_f.set_value(idx, 'ts_prev', ts_prev)
-                    road_f.set_value(idx, 'ts_next', ts_next)
-
+        road_f = fill_static_data(node_f, road_f)
+        road_f = fill_non_static_data(node_f, road_f)
         road_f.to_csv(os.path.join(src_fldr, 'road_files', e))
-        for idx in road_f[road_f.speed_mps != ''].index:
-            speed_storage[road_f.road_id[idx]].append(road_f.speed_mps[idx])
+        
+        for idx in road_f.index:
+            if road_f.speed_mps[idx] != np.inf:
+                speed_storage[road_f.road_id[idx]].append(
+                                                        road_f.speed_mps[idx])
     for i in xrange(n_road):
         speed_vector[0][i] = np.mean(np.array(speed_storage[i]))
     return speed_vector, speed_storage
