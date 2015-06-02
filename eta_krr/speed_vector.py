@@ -9,8 +9,8 @@ import numpy as np
 import pickle
 from dateutil import parser
 
-
 def fill_non_static_data(node_f, road_f):
+    """    ignores the speed in averaging if it equals inf    """
     ts_idx = node_f[node_f['timestamp'] != '0'].index
     delta_ts_ticks = zip(ts_idx[:-1], ts_idx[1:])
     for ts_idx_prev, ts_idx_next in delta_ts_ticks:
@@ -62,7 +62,7 @@ def fill_static_data(node_f, road_f):
         road_f.set_value(idx, 'ts_next', ts_next)
     return road_f
 
-def speed_vector(src_fldr, nd_rd_pair_files, n_road):
+def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     """post-processing tool following map-matching.
     Works on map-matched node and road output
     Calculates speed for each road when vehicle was not static
@@ -81,8 +81,8 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road):
     speed_storage = {}
     for i in xrange(n_road):
         speed_storage[i] = []
-    
-    speed_vector = np.zeros((1, n_road))
+    mean_speed_vec = np.zeros((1, n_road))
+   
     for v, e in nd_rd_pair_files:
         node_f = pd.read_csv(os.path.join(src_fldr, 'node_files', v), 
                              index_col=0, usecols=[0, 3, 4])
@@ -103,10 +103,12 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road):
             if road_f.speed_mps[idx] != np.inf:
                 speed_storage[road_f.road_id[idx]].append(
                                                         road_f.speed_mps[idx])
+            if road_f.speed_mps[idx] > max_speed_limit:
+                speed_storage[road_f.road_id[idx]].append(max_speed_limit)
     for i in xrange(n_road):
-        speed_vector[0][i] = np.mean(np.array(speed_storage[i]))
-    return speed_vector, speed_storage
-
+        mean_speed_vec[0][i] = np.mean(np.array(speed_storage[i]))
+        
+    return mean_speed_vec, speed_storage
 if __name__ == "__main__":
     src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS',
                         r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
@@ -116,6 +118,8 @@ if __name__ == "__main__":
                  if os.path.isfile(os.path.join(src_fldr,'road_files',f))]
     nd_rd_pair_files = zip(node_files, road_files)
     n_road = 177 
-    speed_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, n_road)
+    max_speed_limit = 30 #mps
+    sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
+                                                n_road, max_speed_limit)
     pickle.dump(speed_stor, open('speed_storage.p', 'wb'))    
-    pickle.dump(speed_vec, open('speed_vector.p', 'wb'))
+    pickle.dump(sp_vec, open('speed_vector.p', 'wb'))
