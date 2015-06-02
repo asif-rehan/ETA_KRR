@@ -122,29 +122,35 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     mean_speed_vec = sp_vec_mean_with_nan_replaced(n_road, speed_storage)
     return mean_speed_vec, speed_storage
 
-if __name__ == "__main__":
-    src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS',
-                        r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
-    node_files = [f for f in os.listdir(os.path.join(src_fldr,'node_files'))  \
-                 if os.path.isfile(os.path.join(src_fldr,'node_files',f))]
-    road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files'))  \
-                 if os.path.isfile(os.path.join(src_fldr,'road_files',f))]
+
+def main():
+    src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
+        r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
+    node_files = [f for f in os.listdir(os.path.join(src_fldr, 'node_files')) if 
+        os.path.isfile(os.path.join(src_fldr, 'node_files', f))]
+    road_files = [f for f in os.listdir(os.path.join(src_fldr, 'road_files')) if 
+        os.path.isfile(os.path.join(src_fldr, 'road_files', f))]
     nd_rd_pair_files = zip(node_files, road_files)
-    n_road = 177 
+    n_road = 177
     max_speed_limit = 30 #mps ~= 65mph
-    store = [(f[0][12:14],f[0][15:18],f[0][19:21], f[0], f[1])  for f \
-                                                        in nd_rd_pair_files]
-    files_df = pd.DataFrame(store, columns=['route', 'DOW', 'TOD', 'node_file',
-                                            'road_file'])
-    seg =   [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] 
-                    for DOW in ['thu', 'tue', 'wed']]
-    for tod, dow in seg: 
-        select = files_df.loc[(files_df['DOW'] == dow) & (files_df['TOD']==tod)]
+    store = [(f[0][12:14], f[0][15:18], f[0][19:21], f[0], f[1]) for f in 
+        nd_rd_pair_files]
+    files_df = pd.DataFrame(store, columns=['route', 'DOW', 'TOD', 'node_file', 
+            'road_file'])
+    seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
+        DOW in ['thu', 'tue', 'wed']]
+    for tod, dow in seg:
+        select = files_df.loc[(files_df['DOW'] == dow) & (files_df['TOD'] == tod)]
         nd_rd_pair_files = zip(select.node_file, select.road_file)
         sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
-                                                    n_road, max_speed_limit)
-        pickle.dump(speed_stor, open(dow+'_'+tod+'_speed_storage.p', 'wb'))    
-        pickle.dump(sp_vec, open(dow+'_'+tod+'_speed_vector.p', 'wb'))
+            n_road, max_speed_limit)
+        pickle.dump(speed_stor, open(dow + '_' + tod + '_speed_storage.p', 'wb'))
+        pickle.dump(sp_vec, open(dow + '_' + tod + '_speed_vector.p', 'wb'))
+    return None
+
+if __name__ == "__main__":
+    main()
+
         
         
         
