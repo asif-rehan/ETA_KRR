@@ -11,7 +11,8 @@ from dateutil import parser
 from scipy import stats
 
 def fill_non_static_data(node_f, road_f):
-    """    ignores the speed in averaging if it equals inf    """
+    """ fills in the five columns for non-static portion
+    ignores the speed in averaging if it equals inf    """
     ts_idx = node_f[node_f['timestamp'] != '0'].index
     delta_ts_ticks = zip(ts_idx[:-1], ts_idx[1:])
     for ts_idx_prev, ts_idx_next in delta_ts_ticks:
@@ -33,6 +34,7 @@ def fill_non_static_data(node_f, road_f):
     return road_f
 
 def fill_static_data(node_f, road_f):
+    """ fills in the five columns for static portion """
     static = road_f[road_f['length'] == 0]
     for idx in static.index:
         try:
@@ -88,7 +90,8 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     ts_idx_next: Timestamp index immediately after as vehicle is on move or 
                     about to stop 
     ts_prev: Timestamp immediately before as vehicle is on or about to move
-    ts_next: Timestamp immediately after as vehicle is on move or about to stop 
+    ts_next: Timestamp immediately after as vehicle is on move or about to stop
+    ts_delta: Time difference from ts_prev to ts_next 
     """
     speed_storage = {}
     for i in xrange(n_road):
@@ -100,6 +103,7 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
                              index_col=0, usecols=[0, 3, 4])
         road_f = pd.read_csv(os.path.join(src_fldr, 'road_files', e), 
                              index_col=0)
+        
         road_f['speed_mps']    = ""
         road_f['ts_delta_sec'] = ""
         road_f['ts_idx_prev']  = ""
@@ -128,7 +132,34 @@ if __name__ == "__main__":
     nd_rd_pair_files = zip(node_files, road_files)
     n_road = 177 
     max_speed_limit = 30 #mps ~= 65mph
-    sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
-                                                n_road, max_speed_limit)
-    pickle.dump(speed_stor, open('speed_storage.p', 'wb'))    
-    pickle.dump(sp_vec, open('speed_vector.p', 'wb'))
+    store = [(f[0][12:14],f[0][15:18],f[0][19:21], f[0], f[1])  for f \
+                                                        in nd_rd_pair_files]
+    files_df = pd.DataFrame(store, columns=['route', 'DOW', 'TOD', 'node_file',
+                                            'road_file'])
+    seg =   [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] 
+                    for DOW in ['thu', 'tue', 'wed']]
+    for tod, dow in seg: 
+        select = files_df.loc[(files_df['DOW'] == dow) & (files_df['TOD']==tod)]
+        nd_rd_pair_files = zip(select.node_file, select.road_file)
+        sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
+                                                    n_road, max_speed_limit)
+        pickle.dump(speed_stor, open(dow+'_'+tod+'_speed_storage.p', 'wb'))    
+        pickle.dump(sp_vec, open(dow+'_'+tod+'_speed_vector.p', 'wb'))
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
