@@ -140,32 +140,13 @@ def main():
     seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
         DOW in ['thu', 'tue', 'wed']]
     for tod, dow in seg:
-        select = files_df.loc[(files_df['DOW'] == dow) & (files_df['TOD'] == tod)]
+        select = files_df.loc[(files_df['DOW']==dow) & (files_df['TOD']==tod)]
         nd_rd_pair_files = zip(select.node_file, select.road_file)
         sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
             n_road, max_speed_limit)
-        pickle.dump(speed_stor, open(dow + '_' + tod + '_speed_storage.p', 'wb'))
+        pickle.dump(speed_stor, open(dow+'_'+tod+'_speed_storage.p', 'wb'))
         pickle.dump(sp_vec, open(dow + '_' + tod + '_speed_vector.p', 'wb'))
     return None
 
 if __name__ == "__main__":
     main()
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
