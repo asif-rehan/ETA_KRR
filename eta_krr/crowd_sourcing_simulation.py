@@ -9,7 +9,6 @@ import pickle
 from datetime import timedelta
 from random import randint
 
-
 def choose_offboard_ts(onboard_time_min, onboard_time_max, onboard_ts):
     """May be also try Gaussian?"""
     rand_onboard_time = randint(onboard_time_min, onboard_time_max) 
@@ -22,30 +21,9 @@ def next_agent_start_ts(overlap_max_minute, overlap_dir, offboard_ts):
     onboard_ts = offboard_ts - overlap_dir * rand_overlap_tdelta
     return onboard_ts
 
-
-#==============================================================================
-# script
-#==============================================================================
-src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS',
-                    r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
-road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files'))  \
-             if os.path.isfile(os.path.join(src_fldr,'road_files',f))]
-store = [(f[12:14], f[15:18], f[19:21], f) for f in road_files]
-rd_files_df = pd.DataFrame(store, columns=['route', 'DOW', 'TOD', 'road_file'])
-n_road = 177
-onboard_time_min = 4
-onboard_time_max = 15
-overlap_max_minute = 15
-overlap_dir = 1         #or -1 indicates how time-separate CS
-
-route_set = set(['rd', 'bl',  'gr', 'yl', 'or', 'pl'])
-
-seg =   [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] 
-                    for DOW in ['thu', 'tue', 'wed']]
-
-
-
-for (tod, dow) in seg:
+def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road, 
+                      onboard_time_min, onboard_time_max, 
+                      overlap_max_minute, overlap_dir):
     tod_dow_rd_files = rd_files_df.loc[(rd_files_df['DOW']==dow) &
                                (rd_files_df['TOD']==tod), 
                                'road_file'].values    
@@ -80,11 +58,37 @@ for (tod, dow) in seg:
                                                         hopped_len_on_road_id
             onboard_ts = next_agent_start_ts(overlap_max_minute, 
                                        overlap_dir, offboard_ts)
-        
+    return len_indic_mat, hop_time
 
-    pickle.dump(len_indic_mat, open(os.path.join(src_fldr, r'..\..', 
-                                    "eta_krr", 
-                                    dow +'_'+ tod +"_len_indic_mat.p"), 'wb'))
-    pickle.dump(pd.Series(hop_time), open(os.path.join(src_fldr, r'..\..', 
-                                    "eta_krr", 
-                                    dow +'_'+ tod +"_hop_time.p"), 'wb'))
+def main():
+    src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
+                        r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
+    road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files')) 
+                  if os.path.isfile(os.path.join(src_fldr, 'road_files', f))]
+    store = [(f[12:14], f[15:18], f[19:21], f) for f in road_files]
+    rd_files_df = pd.DataFrame(store, 
+                               columns=['route', 'DOW', 'TOD', 'road_file'])
+    n_road = 177
+    onboard_time_min = 4
+    onboard_time_max = 15
+    overlap_max_minute = 15
+    overlap_dir = 1 #or -1 indicates how time-separate CS
+    #route_set = set(['rd', 'bl', 'gr', 'yl', 'or', 'pl'])
+    seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
+        DOW in ['thu', 'tue', 'wed']]
+    for tod, dow in seg:
+        len_indic_mat, hop_time = crowd_source_simu(rd_files_df,
+                                                    src_fldr,
+                                                    tod, dow, 
+                                                    n_road, 
+                                                    onboard_time_min, 
+                                                    onboard_time_max, 
+                                                    overlap_max_minute, 
+                                                    overlap_dir)
+        pickle.dump(len_indic_mat, open(os.path.join(src_fldr, 
+            r'..\..', "eta_krr", dow + '_' + tod + "_len_indic_mat.p"), 'wb'))
+        pickle.dump(pd.Series(hop_time), open(os.path.join(src_fldr, r'..\..', 
+                           "eta_krr", dow + '_' + tod + "_hop_time.p"), 'wb'))
+    return None
+if __name__ == "__main__":
+    main()
