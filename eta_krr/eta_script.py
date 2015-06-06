@@ -8,6 +8,7 @@ import networkx as nx
 from networkx.utils import dict_to_numpy_array
 import pickle
 import  numpy as np
+from scipy import linalg
 
 #==============================================================================
 #1. done - clean up the shpfile to focus only on transit route
@@ -22,7 +23,7 @@ import  numpy as np
 #    - edges > 999+
 #    - nodes < -999
 #3. make crowd sourcing agent
-#4. construct Q, ys 
+#4. construct Q_arr, ys 
 #    - edge_key = graph[node1][node2].keys()
 #5. Solve for regularizer and f
 #6. Predict
@@ -78,13 +79,16 @@ def cs_agent():
     return path_x, trvl_tm_y 
 
 def makeQ():
-    return Q
+    
+    return Q_arr
 #==============================================================================
 # KRR for trajectory regression
 #==============================================================================
-def LOO_cost(Q, M, Ns, lam, L, yn_vec):
+def LOO_cost(Q_arr, M, Ns, reg_lambda, L, yn_vec):
     Im = np.identity(M)
-    H = np.dot(np.dot(n),Q)
+    denom = linalg.inv(Q_arr.dot(Q_arr.T) + reg_lambda*L)
+    H = Q_arr.T.dot(denom.dot(Q_arr))
+    linalg.inv(linalg.block_diag(I - H))
     temp = np.dot(np.invert(np.diag((Im - H))), np.dot((Im - H), yn_vec)) 
     LOO_cost = 
     return reg_paramM

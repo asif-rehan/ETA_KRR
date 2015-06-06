@@ -44,20 +44,19 @@ def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road,
             hop = road_f.loc[(road_f['ts_prev'] >= onboard_ts) &  
                               (road_f['ts_next'] <= offboard_ts)]
             if len(hop.index) != 0:
-                len_indic_mat[trip_id] = 0
-                trip_id += 1 
-            onbrd_experienced_time = hop.loc[hop.ts_idx_prev.unique(), 
+                onbrd_experienced_time = hop.loc[hop.ts_idx_prev.unique(), 
                                                         'ts_delta_sec'].sum()
-            if onbrd_experienced_time > 0:
-                hop_time.append(onbrd_experienced_time)
-                
-                for hop_road_id in hop.road_id.unique():
-                    hopped_len_on_road_id = hop.loc[hop['road_id'] ==   \
+                if onbrd_experienced_time > 0:
+                    hop_time.append(onbrd_experienced_time)
+                    len_indic_mat[trip_id] = 0
+                    for hop_road_id in hop.road_id.unique():
+                        hopped_len_on_road_id = hop.loc[hop['road_id'] ==   \
                                                     hop_road_id,'length'].sum()
-                    len_indic_mat.loc[hop_road_id,trip_id] =   \
+                        len_indic_mat.loc[hop_road_id,trip_id] =   \
                                                         hopped_len_on_road_id
+                    trip_id += 1
             onboard_ts = next_agent_start_ts(overlap_max_minute, 
-                                       overlap_dir, offboard_ts)
+                                           overlap_dir, offboard_ts)
     return len_indic_mat, hop_time
 
 def main():
