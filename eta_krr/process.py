@@ -88,4 +88,4 @@ def main(Q_arr, y_vec_df, speed_vec_files_df, Lapl,
     return diff
 
 if __name__ == "__main__":
-    pass
+    main()
