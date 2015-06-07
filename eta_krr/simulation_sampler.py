@@ -57,7 +57,7 @@ def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road,
                     trip_id += 1
             onboard_ts = next_agent_start_ts(overlap_max_minute, 
                                            overlap_dir, offboard_ts)
-    return len_indic_mat, hop_time
+    return len_indic_mat, pd.Series(hop_time)
 
 def main():
     src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
@@ -86,7 +86,7 @@ def main():
                                                     overlap_dir)
         pickle.dump(len_indic_mat, open(os.path.join(src_fldr, 
             r'..\..', "eta_krr", dow + '_' + tod + "_len_indic_mat.p"), 'wb'))
-        pickle.dump(pd.Series(hop_time), open(os.path.join(src_fldr, r'..\..', 
+        pickle.dump(hop_time, open(os.path.join(src_fldr, r'..\..', 
                            "eta_krr", dow + '_' + tod + "_hop_time.p"), 'wb'))
     return None
 if __name__ == "__main__":

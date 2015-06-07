@@ -74,7 +74,7 @@ def sp_vec_mean_with_nan_replaced(n_road, speed_storage):
     nan_indx = np.where(np.isnan(mean_speed_vec))
     col_mean = stats.nanmean(mean_speed_vec, axis=1)
     mean_speed_vec[nan_indx] = np.take(col_mean, nan_indx[0])
-    return mean_speed_vec
+    return mean_speed_vec.reshape(n_road, 1)
 
 def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     """post-processing tool following map-matching.
