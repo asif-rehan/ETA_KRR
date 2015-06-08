@@ -29,8 +29,8 @@ onboard_time_min = 2
 onboard_time_max = 15
 overlap_max_minute = 15
 overlap_dir = 1 #or -1 indicates how time-separate CS
-lamb_min = 0.1
-lamb_max= 10000
+lamb_min = 1
+lamb_max= 1000
 lamb_step = 1
 seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
     DOW in ['thu', 'tue', 'wed']]
@@ -67,9 +67,10 @@ for tod, dow in seg:
     fig = plt.figure()
     ax = plt.axes()
     ax.plot(test_experience_time, pred_experiece_time, 'o')
-    cor = stats.pearsonr(test_experience_time.as_matrix(), 
+    cor_r, two_tail_p_value = stats.pearsonr(test_experience_time.as_matrix(), 
                          pred_experiece_time.flatten())
-    corr_coef.append((dow, tod, cor))
+    corr_coef.append((dow, tod, cor_r, two_tail_p_value, opt_lambda))
+    print (dow, tod, cor_r, two_tail_p_value, opt_lambda)
     ttl = 'Predicted versus Actual Time - {0} {1}'.format(dow, tod)
     plt.title(ttl)
     plt.xlabel('Actual (sec)')
@@ -79,7 +80,7 @@ for tod, dow in seg:
     
     fig = plt.figure()
     ax = plt.axes()
-    errors, lambda_values = zip(*err_log)
+    lambda_values, errors = zip(*err_log)
     plt.plot(lambda_values, errors)
     plt.xscale('log') 
     plt.yscale('log')
@@ -90,4 +91,6 @@ for tod, dow in seg:
     plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
 
-print pd.DataFrame(corr_coef, columns=['DOW', 'TOD', 'Corr Coef'])
+print pd.DataFrame(corr_coef, columns=['DOW', 'TOD', 
+                                       'Corr Coef', 'Two-tailed p-value',
+                                       'Optimized lambda'])

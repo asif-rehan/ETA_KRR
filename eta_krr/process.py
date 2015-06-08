@@ -14,16 +14,20 @@ def solve_f(Q_arr, Lapl, y_vec_arr, reg_lambda):
 
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
-    LOOCV_argmin_lambda = np.inf
+    error_threshold = np.inf
     error_log = []
-    for reg_lambda in np.arange(min_lambda, max_lambda, increment):
+    for lambda_now in np.arange(min_lambda, max_lambda, increment):
         if fast:
-            error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda)
+            try:
+                error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
+            except:
+                error = slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
         else:
-            error = slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda)
-        error_log.append((reg_lambda, error))
-        if error < LOOCV_argmin_lambda:
-            LOOCV_argmin_lambda = reg_lambda
+            error = slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
+        error_log.append((lambda_now, error))
+        if error < error_threshold:
+            LOOCV_argmin_lambda = lambda_now
+            error_threshold = error
     return LOOCV_argmin_lambda, error_log 
 
 def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
