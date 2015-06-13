@@ -190,6 +190,16 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.close()
     return None
 
-disagg(seg[:3], 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_af_5.csv')
-disagg(seg[3:6], 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_ev_5.csv')
-disagg(seg[6:9], 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_mo_5.csv')
+#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_af.csv')
+#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_ev.csv')
+#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_mo.csv')
+
+#==============================================================================
+# for all-dow, afternoon 
+#==============================================================================
+all_af_sp_storage = [f for f in os.listdir(os.getcwd()) 
+                   if os.path.isfile(f) and f[-18:] == 'af_speed_storage.p']
+all_af_speed_storage = 
+for i in all_af_sp_storage:
+    for keys, values in i:
+    all_af_sp_storage = pickle.load(open(i, 'rb'))

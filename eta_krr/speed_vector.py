@@ -123,7 +123,7 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     return mean_speed_vec, speed_storage
 
 
-def main():
+def main(seg):
     src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
         r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
     node_files = [f for f in os.listdir(os.path.join(src_fldr, 'node_files')) if 
@@ -137,9 +137,12 @@ def main():
         nd_rd_pair_files]
     files_df = pd.DataFrame(store, columns=['route', 'DOW', 'TOD', 'node_file', 
             'road_file'])
-    seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
-        DOW in ['thu', 'tue', 'wed']]
+    
     for tod, dow in seg:
+        #======================================================================
+        #to obtain speed vector for across either of (all_dow && all tod) 
+        #change selection condition 
+        #======================================================================
         select = files_df.loc[(files_df['DOW']==dow) & (files_df['TOD']==tod)]
         nd_rd_pair_files = zip(select.node_file, select.road_file)
         sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
@@ -149,4 +152,6 @@ def main():
     return None
 
 if __name__ == "__main__":
-    main()
+    seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
+        DOW in ['thu', 'tue', 'wed']]
+    main(seg)
