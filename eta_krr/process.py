@@ -43,10 +43,10 @@ def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
 def slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
     LOOCV_cost = 0
     for n in xrange(N): 
-        _Q_leave_n = np.delete(Q_arr, n, 0)
+        _Q_leave_n = np.delete(Q_arr, n, 1)
         _y_leave_n = np.delete(y_vec_arr, n, 0)
         _f_vec_leave_n = solve_f(_Q_leave_n, Lapl, _y_leave_n, reg_lambda)
-        LOOCV_cost += (y_vec_arr[n] - Q_arr[:, n].T.dot(_f_vec_leave_n))^2
+        LOOCV_cost += (y_vec_arr[n] - Q_arr[:, n].T.dot(_f_vec_leave_n))**2
     avg_LOOCV_cost = LOOCV_cost/float(N)
     return avg_LOOCV_cost 
 
