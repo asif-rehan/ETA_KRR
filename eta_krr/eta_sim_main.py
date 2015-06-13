@@ -92,7 +92,7 @@ def inner_loop(dow, tod, corr_coef, onboard_time_max, overlap_dir,
     test_pred_experience_time = process.predict_travel_time(optim_f_vec, 
                                                       1.0/speed_vec_df, 
                                         test_link_indic_mat.as_matrix())
-    
+    test_rmse = process.calc_rmse(train_set, target_set)
     #==========================================================================
     
     
