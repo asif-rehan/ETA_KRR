@@ -4,10 +4,10 @@ Created on Jun 6, 2015
 @author: Asif.Rehan@engineer.uconn.edu
 '''
 import os
+import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import stats, linalg
 import pickle 
-import networkx as nx
 from eta_krr import process
 from eta_krr.simulation_sampler import crowd_source_simu
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ def crowd_density(train_len_indic_mat,
 
 def inner_loop(dow, tod, corr_coef, onboard_time_max, overlap_dir, 
                overlap_max_minute):
-    train_len_indic_mat,train_experienced_time = crowd_source_simu(
+    train_link_indic_mat,train_experienced_time = crowd_source_simu(
                                                     rd_files_df,
                                                     src_fldr,
                                                     tod, dow, 
@@ -63,17 +63,24 @@ def inner_loop(dow, tod, corr_coef, onboard_time_max, overlap_dir,
                                                     overlap_max_minute, 
                                                     overlap_dir)
     
-    lcd, ncd = crowd_density(train_len_indic_mat) 
-    
+    lcd, ncd = crowd_density(train_link_indic_mat) 
+
     speed_vec_file = speed_vec_files_df.loc[
-                                        (speed_vec_files_df['DOW']=='thu') & 
-                                        (speed_vec_files_df['TOD']=='mo'), 
+                                        (speed_vec_files_df['DOW']==dow) & 
+                                        (speed_vec_files_df['TOD']==tod), 
                                         'speed_vec_file'].values[0]
     speed_vec_df = pickle.load(open(speed_vec_file, 'rb'))
-    optim_f_vec, opt_lambda, err_log = process.build_model(train_len_indic_mat, 
+    optim_f_vec, opt_lambda, err_log =process.build_model(train_link_indic_mat, 
                                       train_experienced_time,
                                       speed_vec_df, 
                                       Lapl, lamb_min, lamb_max, lamb_step)
+    train_pred = process.predict_travel_time(optim_f_vec, 
+                                                      1.0/speed_vec_df, 
+                                        train_link_indic_mat.as_matrix())
+    train_rmse = process.calc_rmse(train_experienced_time.as_matrix() - 
+                                   train_pred)
+    #==========================================================================
+    # Test set
     test_link_indic_mat, test_experience_time = crowd_source_simu(rd_files_df,
                                                 src_fldr,
                                                 tod, dow, 
@@ -85,6 +92,11 @@ def inner_loop(dow, tod, corr_coef, onboard_time_max, overlap_dir,
     test_pred_experience_time = process.predict_travel_time(optim_f_vec, 
                                                       1.0/speed_vec_df, 
                                         test_link_indic_mat.as_matrix())
+    
+    #==========================================================================
+    
+    
+    
     #val_link_indic_mat = pickle.load(open(dow+'_'+tod+'_len_indic_mat.p',
     #                                      'rb'))
     #val_experiece_tim = pickle.load(open(dow+'_'+tod+'_hop_time.p','rb'))    
@@ -133,7 +145,7 @@ def disagg(seg, repeat):
                                        'Mean exp time % diff'])
     
     return summary
-    
+
 def plotting(dow, tod, test_experience_time, test_pred_experience_time,
              opt_lambda, overlap_dir_tag, corr_coef, err_log, 
              speed_vec_df, optim_f_vec):
@@ -190,16 +202,26 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.close()
     return None
 
-#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_af.csv')
-#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_ev.csv')
-#disagg(seg, 5).to_csv(r'../_files/eta_krr_plots/disagg_summary_mo.csv')
+disagg(seg, 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
 
 #==============================================================================
 # for all-dow, afternoon 
 #==============================================================================
-all_af_sp_storage = [f for f in os.listdir(os.getcwd()) 
-                   if os.path.isfile(f) and f[-18:] == 'af_speed_storage.p']
-all_af_speed_storage = 
-for i in all_af_sp_storage:
-    for keys, values in i:
-    all_af_sp_storage = pickle.load(open(i, 'rb'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

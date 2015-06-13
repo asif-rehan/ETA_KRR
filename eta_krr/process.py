@@ -11,7 +11,11 @@ def solve_f(Q_arr, Lapl, y_vec_arr, reg_lambda):
     b = Q_arr.dot(y_vec_arr)
     f_vec = linalg.solve(A, b) 
     return f_vec
-
+def calc_rmse(train_set, target_set):
+    """inputs as arrays"""
+    assert len(train_set) == len(target_set)
+    _rmse = linalg.norm(train_set - target_set)/np.sqrt(len(train_set))
+    return  _rmse
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
     error_threshold = np.inf
