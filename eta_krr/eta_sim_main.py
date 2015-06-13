@@ -47,7 +47,7 @@ def crowd_density(train_len_indic_mat,
     N= train_len_indic_mat.shape[1]
     M= train_len_indic_mat.shape[0]
     link_crowd_density_series =   \
-                        train_len_indic_mat.sum(axis=1)/(float(N)*id_len_ser)
+                        train_len_indic_mat.mean(axis=1)/id_len_ser
     network_crowd_density = link_crowd_density_series.sum(axis=0) / float(M)
     return link_crowd_density_series, network_crowd_density
 
