@@ -54,19 +54,17 @@ def get_metrics(test_pred_experience_time, test_experience_time,
                 dow, tod, onboard_time_max, overlap_max_minute, 
                 speed_vec_df, optim_f_vec):
     test_rmse = process.calc_rmse(test_pred_experience_time, 
-        test_experience_time.as_matrix())
+                                  test_experience_time.as_matrix())
     test_exp_arr = test_experience_time.as_matrix()
     test_Rsq, test_p_value, test_se = stats.linregress(
                                            test_pred_experience_time.flatten(),
                                            test_exp_arr)[2:]
-    pearson_r, pear_r_p_value =stats.pearsonr(test_experience_time.as_matrix(), 
-                                    test_pred_experience_time.flatten())   
     diff = test_pred_experience_time.flatten()-test_experience_time.as_matrix()
     pct_diff = (test_pred_experience_time.flatten() - 
                 test_experience_time.as_matrix())/  \
                 test_experience_time.as_matrix()*100                                        
-    metrics =  test_rmse, test_Rsq, test_p_value, test_se, pearson_r,  \
-                pear_r_p_value, diff.min(), diff.max(), diff.mean(),  \
+    metrics =  test_rmse, test_Rsq**2, test_p_value, test_se,  \
+               diff.min(), diff.max(), diff.mean(),  \
                 pct_diff.min(), pct_diff.max(), pct_diff.mean()
     return metrics
 
@@ -148,23 +146,27 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     #fig = plt.figure()
     #ax = plt.axes()
     #ax.plot(test_experience_time, test_pred_experience_time, 'o')
-    #==========================================================================        
+    #==========================================================================
+            
     return opt_lambda, ncd, train_metrics, test_metrics, val_metrics_list
 
 
-def run_full_output(seg, speed_vec_dow='all',speed_vec_tod='af', 
+def run_full_output(seg, max_onboard_time_conditions=[15,10,5], 
+                    speed_vec_dow='all',speed_vec_tod='af', 
                     val_tods=['mo', 'ev'],repeat=1):    
     columns=['Model_ID', 'Dataset','TOD', 'DOW',
                 'Lambda', 'Max_OnBoardTime_minute', 'Sparsity', 
                 'Network_Crowding_Density', 'RMSE', 'R_Squared', 
-                'Slope_p_Value', 'StdErr', 'Pearson_r', 'Pearson_r_p_Value', 
+                'Slope_p_Value', 'StdErr', 
                 'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 'Min_Diff_pct', 
                 'Max_Diff_pct','Mean_Diff_pct']
     output_df = pd.DataFrame(columns = columns)
     model_id = 0
     for tod, dow in seg:
-        for obd_max in  [15, 10, 5]:
+        for obd_max in  max_onboard_time_conditions:
             for overlap_dir in [1, -1]:
+                model_id += 1
+                
                 overlap_max_minute = obd_max
                 out = inner_loop(dow, tod, obd_max, overlap_dir, val_tods,
                                                      overlap_max_minute,
@@ -189,6 +191,23 @@ def run_full_output(seg, speed_vec_dow='all',speed_vec_tod='af',
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
     return output_df
+
+
+def congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, optim_f_vec, fig, ax):
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.set_axis_bgcolor('k')
+    tt_chng = speed_vec_df * optim_f_vec
+    mm_val('').plot_roadnetwork(ax, fig, select=False, heatmap=True, heatmap_cmap=tt_chng.flatten())
+    titl_sp_dev = 'Link Time Deviation - {2} {0} {1}'.format(
+        dow.upper(), 
+        tod.upper(), 
+        overlap_dir_tag)
+    plt.title('       ' + titl_sp_dev)
+    plt.xlabel('Easting')
+    plt.ylabel('Northing')
+    fig.savefig('../_files/eta_krr_plots/{}'.format(titl_sp_dev))
+    plt.close()
 
 def plotting(dow, tod, test_experience_time, test_pred_experience_time,
              opt_lambda, overlap_dir_tag, corr_coef, err_log, 
@@ -228,22 +247,7 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
     
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.set_axis_bgcolor('k')
-    tt_chng = speed_vec_df * optim_f_vec
-    mm_val('').plot_roadnetwork(ax, fig, select=False, heatmap=True, 
-                                heatmap_cmap=tt_chng.flatten())
-    titl_sp_dev = 'Link Time Deviation - {2} {0} {1}'.format(
-                                                            dow.upper(), 
-                                                            tod.upper(),
-                                                        overlap_dir_tag)
-    plt.title('       '+titl_sp_dev)
-    
-    plt.xlabel('Easting')
-    plt.ylabel('Northing')
-    fig.savefig('../_files/eta_krr_plots/{}'.format(titl_sp_dev))
-    plt.close()
+    congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, optim_f_vec, fig, ax)
     return None
 
 #disagg(seg[0], 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
@@ -255,4 +259,5 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
 if __name__ == '__main__':
     seg = [(TOD, DOW) for TOD in ['af'] for 
                         DOW in ['thu']]
-    print run_full_output(seg, val_tods=['mo', 'ev'])
+    print run_full_output(seg, max_onboard_time_conditions=[15],#, 10, 5],
+                                val_tods=['mo', 'ev'])
