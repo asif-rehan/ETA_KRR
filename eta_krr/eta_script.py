@@ -6,7 +6,7 @@ Created on May 5, 2015
 import os
 import networkx as nx
 from networkx.utils import dict_to_numpy_array
-import pickle
+import pickle as pkl
 import  numpy as np
 #==============================================================================
 #1. done - clean up the shpfile to focus only on transit route
@@ -57,6 +57,6 @@ if __name__ == '__main__':
     eta_mg = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS\Py Codes',
                           r'HMM_Krumm_Newson_Implementation\MM_AR',
                           r'Relevant_files\MultiGraph.p')
-    Lapl = main( pickle.load(open(eta_mg, 'rb')) )
-    pickle.dump(Lapl, open(r'Laplacian_matrix.p', 'wb'))
+    Lapl = main( pkl.load(open(eta_mg, 'rb')) )
+    pkl.dump(Lapl, open(r'Laplacian_matrix.p', 'wb'))
     

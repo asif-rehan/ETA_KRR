@@ -6,7 +6,7 @@ Created on May 27, 2015
 import os
 import pandas as pd
 import numpy as np
-import pickle
+import pickle as pkl
 from dateutil import parser
 from scipy import stats
 
@@ -147,8 +147,8 @@ def main(seg):
         nd_rd_pair_files = zip(select.node_file, select.road_file)
         sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
             n_road, max_speed_limit)
-        pickle.dump(speed_stor, open(dow+'_'+tod+'_speed_storage.p', 'wb'))
-        pickle.dump(sp_vec, open(dow + '_' + tod + '_speed_vector.p', 'wb'))
+        pkl.dump(speed_stor, open(dow+'_'+tod+'_speed_storage.p', 'wb'))
+        pkl.dump(sp_vec, open(dow + '_' + tod + '_speed_vector.p', 'wb'))
     return None
 
 if __name__ == "__main__":

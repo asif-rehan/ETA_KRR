@@ -3,7 +3,7 @@
 #==============================================================================
 
 import os
-import  pickle
+import  pkl
 
 datfile = os.path.join(r"/media/asifrehan/REHAN'S/AR_personal/val_dataset",
              "val_dataset_output/sys.stdout.txt")
@@ -36,7 +36,7 @@ trip_road_id_file = os.path.join(r"/media/asifrehan/shared_data_folder",
 
 mg = os.path.join('/media/asifrehan/shared_data_folder/Google Drive',
                       'UConn MS/Py Codes/ETA_KRR/_files/MultiGraph.p')
-mg = pickle.load(open(mg, 'rb'))
+mg = pkl.load(open(mg, 'rb'))
 with open(wrtfile, "r") as nodeseq:
     dat = nodeseq.read().replace("\n", "")
     tgt = open(trip_road_id_file, "w")

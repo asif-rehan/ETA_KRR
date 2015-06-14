@@ -1,5 +1,5 @@
 import networkx as nx
-import fiona, pickle
+import fiona, pkl
 import os
 #import matplotlib.pyplot as plt
 from fiona.crs import from_epsg
@@ -33,5 +33,5 @@ if __name__ == '__main__':
     eta_krr_net_shp = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS',
                     r'Py Codes\ETA_KRR\_files\LineString_Road_Network_UTM.shp')
     eta_G = CreateMultiGraph(eta_krr_net_shp)
-    pickle.dump(eta_G, open('../_files/ETA_MultiGraph.p', 'wb'))
+    pkl.dump(eta_G, open('../_files/ETA_MultiGraph.p', 'wb'))
     

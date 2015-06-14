@@ -5,7 +5,7 @@ Created on May 27, 2015
 """
 import os
 import pandas as pd
-import pickle
+import pickle as pkl
 from datetime import timedelta
 from random import randint
 
@@ -84,9 +84,9 @@ def main():
                                                     onboard_time_max, 
                                                     overlap_max_minute, 
                                                     overlap_dir)
-        pickle.dump(len_indic_mat, open(os.path.join(src_fldr, 
+        pkl.dump(len_indic_mat, open(os.path.join(src_fldr, 
             r'..\..', "eta_krr", dow + '_' + tod + "_len_indic_mat.p"), 'wb'))
-        pickle.dump(hop_time, open(os.path.join(src_fldr, r'..\..', 
+        pkl.dump(hop_time, open(os.path.join(src_fldr, r'..\..', 
                            "eta_krr", dow + '_' + tod + "_hop_time.p"), 'wb'))
     return None
 if __name__ == "__main__":
