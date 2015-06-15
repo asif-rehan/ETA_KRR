@@ -10,6 +10,7 @@ from scipy import stats, linalg
 import pickle as pkl
 from eta_krr import process
 from eta_krr.simulation_sampler import crowd_source_simu
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from MM_AR_validation.validation import Validate as mm_val
 
@@ -25,8 +26,13 @@ speed_vec_files = [f for f in os.listdir(os.getcwd())
 speed_vec_store = [(f[:3], f[4:6], f) for f in speed_vec_files]
 speed_vec_files_df = pd.DataFrame(speed_vec_store, 
                             columns=['DOW', 'TOD', 'speed_vec_file'])
-
+LinkIdLenSer=os.path.join(r'C:\Users\asr13006\Google Drive',
+                    r'UConn MS\Py Codes\HMM_Krumm_Newson_Implementation',
+                    r'MM_AR\Relevant_files\LinkIdLenSer.p')
+id_len_series = pkl.load(open(LinkIdLenSer,'rb'))
+link_len_vec = id_len_series.as_matrix().reshape(len(id_len_series),1)
 Lapl = pkl.load(open("Laplacian_matrix.p", 'rb'))
+
 M = 177
 onboard_time_min = 2
 onboard_time_max = 15
@@ -36,18 +42,31 @@ lamb_min = 1
 lamb_max= 5000
 lamb_step = 1
 
-def crowd_density(train_len_indic_mat, 
-                  LinkIdLenSer=os.path.join(r'C:\Users\asr13006\Google Drive',
-                    r'UConn MS\Py Codes\HMM_Krumm_Newson_Implementation',
-                    r'MM_AR\Relevant_files\LinkIdLenSer.p')):
-    id_len_ser = pkl.load(open(LinkIdLenSer, 'rb'))
+def crowd_density(train_len_indic_mat, link_len_vec):
+    """Measures redundancy measures of the crowd-sourced data
     
-    N= train_len_indic_mat.shape[1]
+    Returns
+    ------- 
+    Redundancy : (How many times the link was observed - 1)
+                Indicates excess information than needed to have it once
+                If not observed at all, it is -1 for that link
+    Redundant Length Present : (Total length covered in k traces - k*length)
+                Assuming link was observed in k-traces
+                Measures its redundant presence influencing least square calc  
+    """
     M= train_len_indic_mat.shape[0]
-    link_crowd_density_series =   \
-                        train_len_indic_mat.mean(axis=1)/id_len_ser
-    network_crowd_density = link_crowd_density_series.sum(axis=0) / float(M)
-    return link_crowd_density_series, network_crowd_density
+    mat = train_len_indic_mat.as_matrix()
+    cover = mat - link_len_vec  
+    count_redundancy = np.zeros((M,1)) 
+    length_redundacy = np.zeros((M,1))
+    for i in range(M):
+        row = cover[i]
+        count_redundancy[i] = len(row[row >= 0]) - 1
+        if len(row[row >= 0]) > 0:
+            length_redundacy[i] = row[row >= 0].sum()/link_len_vec[i]
+        else:
+            length_redundacy[i] = -1
+    return count_redundancy, length_redundacy
 
 
 def get_metrics(test_pred_experience_time, test_experience_time,
@@ -56,14 +75,16 @@ def get_metrics(test_pred_experience_time, test_experience_time,
     test_rmse = process.calc_rmse(test_pred_experience_time, 
                                   test_experience_time.as_matrix())
     test_exp_arr = test_experience_time.as_matrix()
-    test_Rsq, test_p_value, test_se = stats.linregress(
+    test_coeff_corr, test_p_value, test_se_est = stats.linregress(
                                            test_pred_experience_time.flatten(),
                                            test_exp_arr)[2:]
+    test_coeff_det = test_coeff_corr**2
     diff = test_pred_experience_time.flatten()-test_experience_time.as_matrix()
     pct_diff = (test_pred_experience_time.flatten() - 
                 test_experience_time.as_matrix())/  \
                 test_experience_time.as_matrix()*100                                        
-    metrics =  test_rmse, test_Rsq**2, test_p_value, test_se,  \
+    metrics =  test_rmse, test_coeff_corr, test_coeff_det, \
+                test_p_value, test_se_est,  \
                diff.min(), diff.max(), diff.mean(),  \
                 pct_diff.min(), pct_diff.max(), pct_diff.mean()
     return metrics
@@ -78,17 +99,15 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                                     onboard_time_min, 
                                                     onboard_time_max, 
                                                     overlap_max_minute, 
-                                                    overlap_dir)
-    lcd, ncd = crowd_density(train_link_indic_mat) 
-    
+                                                    overlap_dir) 
     speed_vec_file = speed_vec_files_df.loc[
                                 (speed_vec_files_df['DOW']==speed_vec_dow) & 
                                 (speed_vec_files_df['TOD']==speed_vec_tod), 
                                 'speed_vec_file'].values[0]
-    speed_vec_df = pkl.load(open(speed_vec_file, 'rb'))
+    speed_vec_arr = pkl.load(open(speed_vec_file, 'rb'))
     optim_f_vec, opt_lambda, err_log =process.build_model(train_link_indic_mat, 
                                       train_experienced_time,
-                                      speed_vec_df, 
+                                      speed_vec_arr, 
                                       Lapl, lamb_min, lamb_max, lamb_step)
     #==========================================================================
     # make LOO CV plot here
@@ -97,12 +116,12 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     # make heatmap and scatterplot on train dataset
     #==========================================================================
     train_pred_experience_time = process.predict_travel_time(optim_f_vec, 
-                                                1.0 / speed_vec_df, 
+                                                1.0 / speed_vec_arr, 
                                             train_link_indic_mat.as_matrix())
     train_metrics = get_metrics(train_pred_experience_time, 
                                 train_experienced_time, 
                                 dow, tod, onboard_time_max, overlap_max_minute, 
-                                speed_vec_df, optim_f_vec)
+                                speed_vec_arr, optim_f_vec)
     #==========================================================================
     #Test set
     #==========================================================================
@@ -115,11 +134,11 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                                         overlap_max_minute, 
                                                         1)
     test_pred_experience_time = process.predict_travel_time(optim_f_vec, 
-                                                        1.0 / speed_vec_df, 
+                                                        1.0 / speed_vec_arr, 
                                             test_link_indic_mat.as_matrix())
     test_metrics = get_metrics(test_pred_experience_time, test_experience_time,
                                dow, tod, onboard_time_max, overlap_max_minute, 
-                               speed_vec_df, optim_f_vec)
+                               speed_vec_arr, optim_f_vec)
     #==========================================================================
     # make heatmap and scatterplot on test dataset
     #==========================================================================
@@ -132,23 +151,31 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                               '_len_indic_mat.p','rb'))
         val_experiece_time = pkl.load(open(dow+'_'+val_tod+'_hop_time.p','rb')) 
         val_pred_experience_time = process.predict_travel_time(optim_f_vec, 
-                                                        1.0 / speed_vec_df, 
+                                                        1.0 / speed_vec_arr, 
                                             val_link_indic_mat.as_matrix())
         val_metrics = get_metrics(val_pred_experience_time, val_experiece_time,
                                   dow, val_tod, onboard_time_max, 
-                                  overlap_max_minute, speed_vec_df, 
+                                  overlap_max_minute, speed_vec_arr, 
                                   optim_f_vec)
         val_metrics_list.append((val_tod, val_metrics))
     #==========================================================================
-    # make heatmap and scatterplot on val datasets here
+    # Redundancy 
     #==========================================================================
+    count_redunt, len_redunt = crowd_density(train_link_indic_mat,link_len_vec) 
     
-    #fig = plt.figure()
-    #ax = plt.axes()
-    #ax.plot(test_experience_time, test_pred_experience_time, 'o')
+    tt_change =  (link_len_vec * optim_f_vec).flatten()
+    cnt_rdnt_R, cnt_rdnt_p_value = stats.linregress(count_redunt.flatten(),
+                                                        tt_change)[2:4]
+    len_rdnt_R, len_rdnt_p_value = stats.linregress(len_redunt.flatten(),
+                                                        tt_change)[2:4]
     #==========================================================================
-            
-    return opt_lambda, ncd, train_metrics, test_metrics, val_metrics_list
+    congestion_heatmap(dow, tod, val_tod, overlap_dir, tt_change, 
+                       count_redunt.flatten(), len_redunt.flatten())
+    
+    return opt_lambda, cnt_rdnt_R**2, cnt_rdnt_p_value,  \
+            len_rdnt_R**2, len_rdnt_p_value, train_metrics, \
+            test_metrics, val_metrics_list,  \
+            test_experience_time, test_pred_experience_time
 
 
 def run_full_output(seg, max_onboard_time_conditions=[15,10,5], 
@@ -156,80 +183,124 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                     val_tods=['mo', 'ev'],repeat=1):    
     columns=['Model_ID', 'Dataset','TOD', 'DOW',
                 'Lambda', 'Max_OnBoardTime_minute', 'Sparsity', 
-                'Network_Crowding_Density', 'RMSE', 'R_Squared', 
-                'Slope_p_Value', 'StdErr', 
+                'Count_Redunt_Rsq', 'Count_Redunt_pValue',
+                'Length_Redunt_Rsq', 'Length_Redunt_pValue',
+                'RMSE', 'Pearson_r', 'R_Squared', 
+                'Slope_p_Value', 'StdErr_Slope', 
                 'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 'Min_Diff_pct', 
                 'Max_Diff_pct','Mean_Diff_pct']
     output_df = pd.DataFrame(columns = columns)
     model_id = 0
     for tod, dow in seg:
+        
         for obd_max in  max_onboard_time_conditions:
             for overlap_dir in [1, -1]:
                 model_id += 1
-                
                 overlap_max_minute = obd_max
                 out = inner_loop(dow, tod, obd_max, overlap_dir, val_tods,
                                                      overlap_max_minute,
                                                      speed_vec_dow, 
                                                      speed_vec_tod)
-                opt_lam = out[0]
-                NCD = out[1]
-                train_metrics = out[2]  
-                test_metrics = out[3]
-                val_metrics_list = out[4]
+                opt_lam             = out[0]
+                cnt_rdnt_Rsq        = out[1]
+                cnt_rdnt_p_value    = out[2]
+                len_rdnt_Rsq        = out[3]
+                len_rdnt_p_value    = out[4]
+                train_metrics       = out[5]  
+                test_metrics        = out[6]
+                val_metrics_list    = out[7]
                 sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
                                                         else 'Continuous'
                 for (metrics, dat) in [(train_metrics, 'Train'),
                                    (test_metrics, 'Test')]:
-                    row = [model_id, dat, tod, dow, opt_lam, obd_max,
-                           sparsity(overlap_dir), NCD] + list(metrics)
+                    row = [model_id, dat, tod, dow, opt_lam, 
+                           obd_max, sparsity(overlap_dir), 
+                           cnt_rdnt_Rsq, cnt_rdnt_p_value, 
+                           len_rdnt_Rsq, len_rdnt_p_value] + list(metrics)
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
                 for (val_tod, metrics) in val_metrics_list:
-                    row = [model_id,'Validation', val_tod,dow, opt_lam,obd_max,
-                           sparsity(overlap_dir), NCD] + list(metrics)
+                    row = [model_id,'Validation', val_tod,dow, 
+                           opt_lam,obd_max, sparsity(overlap_dir), 
+                           cnt_rdnt_Rsq, cnt_rdnt_p_value, 
+                           len_rdnt_Rsq, len_rdnt_p_value] + list(metrics)
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
+        scatter_plot()
     return output_df
 
 
-def congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, optim_f_vec, fig, ax):
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.set_axis_bgcolor('k')
-    tt_chng = speed_vec_df * optim_f_vec
-    mm_val('').plot_roadnetwork(ax, fig, select=False, heatmap=True, heatmap_cmap=tt_chng.flatten())
-    titl_sp_dev = 'Link Time Deviation - {2} {0} {1}'.format(
-        dow.upper(), 
-        tod.upper(), 
-        overlap_dir_tag)
-    plt.title('       ' + titl_sp_dev)
-    plt.xlabel('Easting')
-    plt.ylabel('Northing')
-    fig.savefig('../_files/eta_krr_plots/{}'.format(titl_sp_dev))
+def congestion_heatmap(dow, tod, val_tod, overlap_dir_tag, 
+                       tt_change, count_redunt, len_redunt):
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
+    fig.set_size_inches(7, 10, forward=True)
+    mpl.rcParams.update({'font.size': 8})
+    fig.suptitle('Data Redundancy Vs Predicted Travel Time Deviation',
+                 fontsize=14)
+    axes[0].set_title('Link Travel Time Deviation')
+    axes[0].set_axis_bgcolor('k')
+    mm_val('').plot_roadnetwork(axes[0], fig, select=False, heatmap=True, 
+                                heatmap_cmap=tt_change)
+    axes[1].set_title('Link Count Redundancy')
+    axes[1].set_axis_bgcolor('k')
+    mm_val('').plot_roadnetwork(axes[1], fig, select=False, heatmap=True, 
+                heatmap_cmap=count_redunt, heat_label='Link Count Redundancy')
+    axes[2].set_title('Link Length Redundancy')
+    axes[2].set_axis_bgcolor('k')
+    mm_val('').plot_roadnetwork(axes[2], fig, select=False, heatmap=True, 
+                heatmap_cmap=len_redunt,heat_label='Link Length Redundancy')
+    
+    fig.text(0.5, 0.04, 'Easting', ha='center', va='center')
+    fig.text(0.10, 0.5, 'Northing', ha='center', va='center', 
+             rotation='vertical')
+
+    sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
+                                                        else 'Continuous'
+    fig.savefig('../_files/eta_krr_plots/{2}_{0}_{1}'.format(dow.upper(), 
+                                                             tod.upper(), 
+                                                    sparsity(overlap_dir_tag)))
+    fig.text(0.8, 0.05, sparsity(overlap_dir_tag)+'_'+tod+'_'+tod, color='red', 
+        bbox=dict(facecolor='none', edgecolor='red'))    
     plt.close()
 
-def plotting(dow, tod, test_experience_time, test_pred_experience_time,
-             opt_lambda, overlap_dir_tag, corr_coef, err_log, 
-             speed_vec_df, optim_f_vec):
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.plot(test_experience_time, test_pred_experience_time, 'o')
-    cor_r, two_tail_p_value = stats.pearsonr(
-                                        test_experience_time.as_matrix(), 
-                                    test_pred_experience_time.flatten())
-    corr_coef.append((overlap_dir_tag, dow, tod, cor_r, two_tail_p_value, 
-                      opt_lambda))
-    print (dow, tod, cor_r, two_tail_p_value, opt_lambda)
-    ttl = 'Predicted versus Actual Time - {2} {0} {1}'.format(
-                                                            dow.upper(), 
-                                                            tod.upper(),
-                                                        overlap_dir_tag)
-    plt.title(ttl)
+
+def scatter_plots(dow, tod, test_experience_time, test_pred_experience_time, 
+                  opt_lambda, overlap_dir_tag):
+    fig, axes = plt.subplots(nrows=3, ncols=2, sharex=True, sharey=True)
+    fig.set_size_inches(7, 10, forward=True)
+    mpl.rcParams.update({'font.size': 8})
+    ttl = 'Predicted vs Actual Time - {2} {0} {1}'.format(dow.upper(), 
+                                                          tod.upper(), 
+                                                          overlap_dir_tag)
+    fig.suptitle('Predicted vs Actual Travel Time', fontsize=14)
+    axes[0].set_title('')
+    axes[0].plot(test_experience_time, test_pred_experience_time, 'o')
+    
+    fig.text(0.5, 0.04, 'Easting', ha='center', va='center')
+    fig.text(0.10, 0.5, 'Northing', ha='center', va='center', 
+             rotation='vertical')
+
+    sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
+                                                        else 'Continuous'
+    fig.savefig('../_files/eta_krr_plots/{2}_{0}_{1}'.format(dow.upper(), 
+                                                             tod.upper(), 
+                                                    sparsity(overlap_dir_tag)))
+    fig.text(0.8, 0.05, sparsity(overlap_dir_tag)+'_'+tod+'_'+tod, color='red', 
+        bbox=dict(facecolor='none', edgecolor='red'))    
+    plt.close()
+    
+
     plt.xlabel('Actual (sec)')
     plt.ylabel('Predicted (sec)')
     plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
+    return fig, ax, ttl
+
+def plotting(dow, tod, test_experience_time, test_pred_experience_time,
+             opt_lambda, overlap_dir_tag, corr_coef, err_log, 
+             speed_vec_df, optim_f_vec):
+    fig, ax, ttl = scatter_plots(dow, tod, test_experience_time, 
+                                 test_pred_experience_time, opt_lambda, overlap_dir_tag, corr_coef)
     
     fig = plt.figure()
     ax = plt.axes()
@@ -247,11 +318,11 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
     
-    congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, optim_f_vec, fig, ax)
+    congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, 
+                       optim_f_vec, fig, ax)
     return None
 
 #disagg(seg[0], 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
-
 #==============================================================================
 # for all-dow, afternoon 
 #==============================================================================
@@ -260,4 +331,4 @@ if __name__ == '__main__':
     seg = [(TOD, DOW) for TOD in ['af'] for 
                         DOW in ['thu']]
     print run_full_output(seg, max_onboard_time_conditions=[15],#, 10, 5],
-                                val_tods=['mo', 'ev'])
+                                val_tods=['mo'])#, 'ev'])
