@@ -169,8 +169,8 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     len_rdnt_R, len_rdnt_p_value = stats.linregress(len_redunt.flatten(),
                                                         tt_change)[2:4]
     #==========================================================================
-    #congestion_heatmap(dow, tod, val_tod, overlap_dir, tt_change, 
-    #                   count_redunt.flatten(), len_redunt.flatten())
+    congestion_heatmap(dow, tod, val_tod, overlap_dir, tt_change, 
+                       count_redunt.flatten(), len_redunt.flatten())
     
     return opt_lambda, cnt_rdnt_R**2, cnt_rdnt_p_value,  \
             len_rdnt_R**2, len_rdnt_p_value, train_metrics, \
@@ -278,18 +278,19 @@ def scatter_plots(dow, tod, scat_plt_data):
     for i in range(len(scat_plt_data)):
         row = i//2
         col = i%2
-        axes[row,col].scatter(scat_plt_data[i][2][0],
+        train_scat = axes[row,col].scatter(scat_plt_data[i][2][0],
                               scat_plt_data[i][2][1], label='Test Data',
-                              s=8, c='r', marker='+', alpha=0.25)
-        axes[row,col].scatter(scat_plt_data[i][3][0],
+                              s=20, c='r', marker='<', alpha=0.50)
+        test_scat = axes[row,col].scatter(scat_plt_data[i][3][0],
                               scat_plt_data[i][3][1], label='Train Data',
-                              s=8, c='b', marker='x', alpha=0.75)
+                              s=10, c='b', marker='>', alpha=0.35)
         if col==1:
             axes[row,col].yaxis.set_label_position("right")
             axes[row,col].set_ylabel(str(scat_plt_data[i][0])+'Minutes', 
                                  rotation='vertical')
-    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=2, mode="expand", borderaxespad=0.)
+    plt.figlegend([train_scat, test_scat], 
+                            ['Train Data', 'Test Data'], loc='upper center')
+        
     fig.text(0.50, 0.04, 'Actual Time', ha='center', va='center')
     fig.text(0.33, 0.05, scat_plt_data[0][1], ha='center', va='center')
     fig.text(0.67, 0.05, scat_plt_data[1][1], ha='center', va='center')
@@ -325,8 +326,8 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
     
-    congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, 
-                       optim_f_vec, fig, ax)
+    #congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, 
+    #                   optim_f_vec, fig, ax)
     return None
 
 #disagg(seg[0], 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
@@ -335,8 +336,7 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
 #==============================================================================
 
 if __name__ == '__main__':
-    seg = [(TOD, DOW) for TOD in ['af'] for 
-                        DOW in ['thu']]
+    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['thu', 'wed', 'thu']]
     allout= run_full_output(seg, max_onboard_time_conditions=[15, 10], #5],
                                 val_tods=['mo'])#, 'ev'])
     allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT.csv')
