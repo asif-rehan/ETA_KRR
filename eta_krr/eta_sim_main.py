@@ -13,6 +13,7 @@ from eta_krr.simulation_sampler import crowd_source_simu
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from MM_AR_validation.validation import Validate as mm_val
+from eta_krr.eta_sim_main[Conflict] import onboard_time_max
 
 this_dir =  os.path.dirname(__file__)
 src_fldr = os.path.join(this_dir, r'../_files/files_for_ETA_simulation')
@@ -71,16 +72,15 @@ def get_metrics(test_pred_experience_time, test_experience_time,
     test_rmse = process.calc_rmse(test_pred_experience_time, 
                                   test_experience_time.as_matrix())
     test_exp_arr = test_experience_time.as_matrix()
-    test_coeff_corr, test_p_value, test_se_est = stats.linregress(
+    test_coeff_corr = stats.linregress(
                                            test_pred_experience_time.flatten(),
-                                           test_exp_arr)[2:]
+                                           test_exp_arr)[2]
     test_coeff_det = test_coeff_corr**2
     diff = test_pred_experience_time.flatten()-test_experience_time.as_matrix()
     pct_diff = (test_pred_experience_time.flatten() - 
                 test_experience_time.as_matrix())/  \
                 test_experience_time.as_matrix()*100                                        
     metrics =  test_rmse, test_coeff_corr, test_coeff_det, \
-                test_p_value, test_se_est,  \
                diff.min(), diff.max(), diff.mean(),  \
                 pct_diff.min(), pct_diff.max(), pct_diff.mean()
     return metrics
@@ -165,7 +165,8 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     speed_pred =  1.0/(speed_vec_arr + optim_f_vec).flatten()*2.236936
     #2.236936 to convert m/s to mph
     #==========================================================================
-    congestion_heatmap(dow, tod, val_tod, overlap_dir, speed_pred, 
+    congestion_heatmap(dow, tod, onboard_time_max,
+                        val_tod, overlap_dir, speed_pred, 
                        count_redunt.flatten())
     
     return opt_lambda, avg_redun, train_metrics, \
@@ -179,11 +180,10 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
 def run_full_output(seg, max_onboard_time_conditions=[15,10,5], 
                     speed_vec_dow='all',speed_vec_tod='af', 
                     val_tods=['mo', 'ev'],repeat=1):    
-    columns=['Model_ID', 'Dataset','TOD', 'DOW',
+    columns = ['Model_ID', 'Dataset', 'TOD', 'DOW',
                 'Lambda', 'Max_OnBoardTime_minute', 'Sparsity', 
                 'Avg_Count_Redunt',
                 'RMSE', 'Pearson_r', 'R_Squared', 
-                'Slope_p_Value', 'StdErr_Slope', 
                 'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 'Min_Diff_pct', 
                 'Max_Diff_pct','Mean_Diff_pct']
     output_df = pd.DataFrame(columns = columns)
@@ -220,36 +220,41 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                     output_df = output_df.append(row_df, ignore_index=True)
                 scat_plt_data.append((obd_max,sparsity(overlap_dir),
                                       out[-4:-2], out[-2:]))
-        scatter_plots(dow, tod,scat_plt_data)
+        #======================================================================
+        # scatter_plots(dow, tod,scat_plt_data)
+        #======================================================================
     return output_df
 
-def congestion_heatmap(dow, tod, val_tod, overlap_dir_tag, 
+def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag, 
                        speed_pred, count_redunt):
     fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
-    fig.set_size_inches(7, 7, forward=True)
+    fig.set_size_inches(7, 8, forward=True)
     mpl.rcParams.update({'font.size': 8})
-    
+    sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
+                                                        else 'Continuous'
     fig.suptitle('Data Redundancy Vs Predicted Speed',
-                 fontsize=14)
-    axes[0].set_title('Predicted Speed (mph)')
+                 fontsize=16)
+    axes[0].set_title('Predicted Speed (mph)', fontsize=12)
     axes[0].set_axis_bgcolor('k')
     mm_val('').plot_roadnetwork(axes[0], fig, select=False, heatmap=True, 
                                 heatmap_cmap=speed_pred, heat_label='mph')
-    axes[1].set_title('Link Count Redundancy')
+    axes[1].set_title('Link Count Redundancy',fontsize=12)
     axes[1].set_axis_bgcolor('k')
     mm_val('').plot_roadnetwork(axes[1], fig, select=False, heatmap=True, 
                 heatmap_cmap=count_redunt, heat_label='Link Count - 1')
     
-    fig.text(0.5, 0.04, 'Easting', ha='center', va='center')
-    fig.text(0.05, 0.5, 'Northing', ha='center', va='center', 
+    fig.text(0.5, 0.05, 'Easting', ha='center', va='center', fontsize=10)
+    fig.text(0.05, 0.5, 'Northing', ha='center', va='center',fontsize=10, 
              rotation='vertical')
-    sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
-                                                        else 'Continuous'
-    fig.savefig('../_files/eta_krr_plots/{2}_{0}_{1}'.format(dow.upper(), 
-                                                             tod.upper(), 
-                                                    sparsity(overlap_dir_tag)))
-    fig.text(0.8, 0.05, sparsity(overlap_dir_tag)+'_'+tod+'_'+tod, color='red', 
-        bbox=dict(facecolor='none', edgecolor='red'))    
+    plt.figtext(0.5, 0.925, 
+                 'Overlap:'+sparsity(overlap_dir_tag)+  \
+                 '    '+'Day of Week: '+dow.upper()+  \
+                 '    '+'Max Onboard Time (Min): '+obt, 
+                 ha='center', va='center')
+    fig.savefig('../_files/eta_krr_plots/{}_{}_{}_{}'.format(dow.upper(), 
+                                                             tod.upper(), obt,
+                                                    sparsity(overlap_dir_tag)),
+                )
     plt.close()
     return None
 
@@ -277,13 +282,18 @@ def scatter_plots(dow, tod, scat_plt_data):
                                  rotation=270, labelpad= 10)
     #fig.legend(leg, ['Test Data','Train Data'],
     #              loc='upper center', bbox_to_anchor=(0.5, 0.5), ncol=2)    
-    fig.text(0.50, 0.04, 'Actual Time', ha='center', va='center')
-    fig.text(0.30, 0.06, scat_plt_data[0][1], ha='center', va='center')
-    fig.text(0.70, 0.06, scat_plt_data[1][1], ha='center', va='center')
+    fig.text(0.50, 0.04, 'Actual Time', ha='center', va='center',fontsize=10)
+    fig.text(0.30, 0.06, scat_plt_data[0][1], 
+             ha='center', va='center',fontsize=9)
+    fig.text(0.70, 0.06, scat_plt_data[1][1], 
+             ha='center', va='center',fontsize=9)
     fig.text(0.05, 0.5, 'Predicted Time', ha='center', va='center', 
-             rotation='vertical')
+             rotation='vertical',fontsize=10)
     fig.text(0.95, 0.5, 'Maximum On-board Time', ha='center', va='center', 
-             rotation=270)
+             rotation=270,fontsize=10)
+    plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
+                 ha='center', va='center')
+    
     fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}'.format(dow.upper(), 
                                                              tod.upper()))
     plt.tight_layout()
@@ -323,7 +333,9 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
 #==============================================================================
 
 if __name__ == '__main__':
-    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['tue']]#, 'wed', 'thu']]
-    allout= run_full_output(seg, max_onboard_time_conditions=[15, 10],# 5],
-                                val_tods=['mo'])#, 'ev'])
-    allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT.csv')
+    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['tue', 'wed', 'thu']]
+    allout= run_full_output(seg, max_onboard_time_conditions=[15, 10, 5])#,
+                                #val_tods=['mo', 'ev'])
+    #==========================================================================
+    # allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT.csv')
+    #==========================================================================
