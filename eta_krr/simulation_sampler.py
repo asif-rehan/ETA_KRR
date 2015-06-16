@@ -11,13 +11,13 @@ from random import randint
 
 def choose_offboard_ts(onboard_time_min, onboard_time_max, onboard_ts):
     """May be also try Gaussian?"""
-    rand_onboard_time = randint(onboard_time_min, onboard_time_max) 
-    offboard_ts = onboard_ts + timedelta(minutes=rand_onboard_time)
+    rand_onboard_time = randint(onboard_time_min*60, onboard_time_max*60) 
+    offboard_ts = onboard_ts + timedelta(seconds=rand_onboard_time)
     return offboard_ts
 
 def next_agent_start_ts(overlap_max_minute, overlap_dir, offboard_ts):
-    rand_ovrlp_minute = randint(0, overlap_max_minute)
-    rand_overlap_tdelta = timedelta(minutes=rand_ovrlp_minute)
+    rand_ovrlp_time = randint(0, overlap_max_minute*60)
+    rand_overlap_tdelta = timedelta(seconds=rand_ovrlp_time)
     onboard_ts = offboard_ts - overlap_dir * rand_overlap_tdelta
     return onboard_ts
 
@@ -37,10 +37,14 @@ def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road,
         data_strt_ts = road_f.loc[start_idx,'ts_prev']
         data_stop_ts = road_f.loc[stop_idx,'ts_next']
         onboard_ts = data_strt_ts
-        while onboard_ts+timedelta(minutes=onboard_time_max) <= data_stop_ts:
+        go_live = True
+        while go_live:
             offboard_ts = choose_offboard_ts(onboard_time_min, 
                                              onboard_time_max, 
                                              onboard_ts)
+            if offboard_ts > data_stop_ts:
+                offboard_ts = data_stop_ts
+                go_live = False
             hop = road_f.loc[(road_f['ts_prev'] >= onboard_ts) &  
                               (road_f['ts_next'] <= offboard_ts)]
             if len(hop.index) != 0:
