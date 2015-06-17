@@ -13,7 +13,6 @@ from eta_krr.simulation_sampler import crowd_source_simu
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from MM_AR_validation.validation import Validate as mm_val
-from eta_krr.eta_sim_main[Conflict] import onboard_time_max
 
 this_dir =  os.path.dirname(__file__)
 src_fldr = os.path.join(this_dir, r'../_files/files_for_ETA_simulation')
@@ -162,7 +161,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     count_redunt, avg_redun = crowd_density(train_link_indic_mat,link_len_vec) 
     
-    speed_pred =  1.0/(speed_vec_arr + optim_f_vec).flatten()*2.236936
+    speed_pred =  1.0/(1.0/speed_vec_arr + optim_f_vec).flatten()*2.236936
     #2.236936 to convert m/s to mph
     #==========================================================================
     congestion_heatmap(dow, tod, onboard_time_max,
@@ -220,9 +219,7 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                     output_df = output_df.append(row_df, ignore_index=True)
                 scat_plt_data.append((obd_max,sparsity(overlap_dir),
                                       out[-4:-2], out[-2:]))
-        #======================================================================
-        # scatter_plots(dow, tod,scat_plt_data)
-        #======================================================================
+        scatter_plots(dow, tod,scat_plt_data)
     return output_df
 
 def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag, 
@@ -236,6 +233,10 @@ def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag,
                  fontsize=16)
     axes[0].set_title('Predicted Speed (mph)', fontsize=12)
     axes[0].set_axis_bgcolor('k')
+#----------------------------------------------------------------------------- 
+    speed_pred[speed_pred > 80] = 80
+    speed_pred[speed_pred < 0] = 0
+#----------------------------------------------------------------------------- 
     mm_val('').plot_roadnetwork(axes[0], fig, select=False, heatmap=True, 
                                 heatmap_cmap=speed_pred, heat_label='mph')
     axes[1].set_title('Link Count Redundancy',fontsize=12)
@@ -249,9 +250,9 @@ def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag,
     plt.figtext(0.5, 0.925, 
                  'Overlap:'+sparsity(overlap_dir_tag)+  \
                  '    '+'Day of Week: '+dow.upper()+  \
-                 '    '+'Max Onboard Time (Min): '+obt, 
+                 '    '+'Max Onboard Time (Min): '+str(obt), 
                  ha='center', va='center')
-    fig.savefig('../_files/eta_krr_plots/{}_{}_{}_{}'.format(dow.upper(), 
+    fig.savefig('../_files/eta_krr_plots/{}_{}_{}_{}_clipped'.format(dow.upper(), 
                                                              tod.upper(), obt,
                                                     sparsity(overlap_dir_tag)),
                 )
