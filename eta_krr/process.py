@@ -5,17 +5,18 @@ Created on Jun 5, 2015
 '''
 import numpy as np
 from scipy import linalg
+from sklearn.metrics import mean_squared_error
 
 def solve_f(Q_arr, Lapl, y_vec_arr, reg_lambda):
     A = Q_arr.dot(Q_arr.T) + reg_lambda*Lapl
     b = Q_arr.dot(y_vec_arr)
     f_vec = linalg.solve(A, b) 
     return f_vec
-def calc_rmse(train_set, target_set):
+def calc_rmse(y, y_pred):
     """inputs as arrays"""
-    assert len(train_set) == len(target_set)
-    _rmse = linalg.norm(train_set - target_set)/np.sqrt(len(train_set))
-    return  _rmse
+    assert len(y) == len(y_pred)
+    RMSE = mean_squared_error(y, y_pred)**0.5
+    return  RMSE
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
     error_threshold = np.inf

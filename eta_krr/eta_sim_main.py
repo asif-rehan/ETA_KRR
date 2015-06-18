@@ -159,16 +159,17 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     # Redundancy 
     #==========================================================================
-    count_redunt, avg_redun = crowd_density(train_link_indic_mat,link_len_vec) 
+    train_count_redunt, train_avg_redun = crowd_density(train_link_indic_mat,
+                                                        link_len_vec) 
     
     speed_pred =  1.0/(1.0/speed_vec_arr + optim_f_vec).flatten()*2.236936
     #2.236936 to convert m/s to mph
     #==========================================================================
     congestion_heatmap(dow, tod, onboard_time_max,
                         val_tod, overlap_dir, speed_pred, 
-                       count_redunt.flatten())
+                       train_count_redunt.flatten())
     
-    return opt_lambda, avg_redun, train_metrics, \
+    return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
             test_experience_time.as_matrix(),  \
             test_pred_experience_time.flatten(),  \
