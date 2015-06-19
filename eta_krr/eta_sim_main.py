@@ -163,14 +163,20 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                                         link_len_vec) 
     
     speed_pred =  1.0/(1.0/speed_vec_arr + optim_f_vec).flatten()*2.236936
+    a = plt.hist(speed_pred, label='Predicted Speed')
+
+    
     #2.236936 to convert m/s to mph
     #==========================================================================
-    congestion_heatmap(dow, tod, onboard_time_max,
-                        val_tod, overlap_dir, speed_pred, 
-                       train_count_redunt.flatten())
+    #congestion_heatmap(dow, tod, onboard_time_max,
+    #                    val_tod, overlap_dir, speed_pred, 
+    #                   train_count_redunt.flatten())
     
     return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
+            train_experienced_time.mean()/60,  \
+            train_experienced_time.min()/60,  \
+            train_experienced_time.max()/60,   \
             test_experience_time.as_matrix(),  \
             test_pred_experience_time.flatten(),  \
             train_pred_experience_time.flatten(),  \
@@ -181,7 +187,11 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                     speed_vec_dow='all',speed_vec_tod='af', 
                     val_tods=['mo', 'ev'],repeat=1):    
     columns = ['Model_ID', 'Dataset', 'TOD', 'DOW',
-                'Lambda', 'Max_OnBoardTime_minute', 'Sparsity', 
+                'Lambda', 'Max_OnBoardTime_minute', 
+                'Actual_Mean_OnBoardTime_minute',
+                'Actual_Min_OnBoardTime_minute',
+                'Actual_Max_OnBoardTime_minute',
+                'Sparsity', 
                 'Avg_Count_Redunt',
                 'RMSE', 'Pearson_r', 'R_Squared', 
                 'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 'Min_Diff_pct', 
@@ -203,18 +213,24 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                 train_metrics       = out[2]  
                 test_metrics        = out[3]
                 val_metrics_list    = out[4]
+                mean_actual_exp_time= out[5]
+                min_actual_exp_time = out[6]
+                max_actual_exp_time = out[7]
                 sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
                                                         else 'Continuous'
                 for (metrics, dat) in [(train_metrics, 'Train'),
                                    (test_metrics, 'Test')]:
                     row = [model_id, dat, tod, dow, opt_lam, 
-                           obd_max, sparsity(overlap_dir), 
+                           obd_max, mean_actual_exp_time, min_actual_exp_time,
+                           max_actual_exp_time, sparsity(overlap_dir), 
                            avg_cnt_redun] + list(metrics)
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
                 for (val_tod, metrics) in val_metrics_list:
                     row = [model_id,'Validation', val_tod,dow, 
-                           opt_lam,obd_max, sparsity(overlap_dir), 
+                           opt_lam,obd_max,  mean_actual_exp_time, 
+                           min_actual_exp_time,
+                           max_actual_exp_time,sparsity(overlap_dir), 
                            avg_cnt_redun] + list(metrics)
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
@@ -262,10 +278,10 @@ def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag,
 
 def scatter_plots(dow, tod, scat_plt_data):
     fig, axes = plt.subplots(nrows=len(scat_plt_data)/2, 
-                             ncols=2)
+                             ncols=2)#, sharex=True, sharey=True)
     fig.set_size_inches(8, 10.5, forward=True)
     mpl.rcParams.update({'font.size': 8})
-    fig.suptitle('Predicted vs Actual Travel Time', fontsize=14)
+    fig.suptitle('Predicted vs Actual Travel Time for Test Dataset\nIndividual Axes', fontsize=14)
     #leg = []
     for i in range(len(scat_plt_data)):
         row = i//2
@@ -296,7 +312,7 @@ def scatter_plots(dow, tod, scat_plt_data):
     plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
                  ha='center', va='center')
     
-    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}'.format(dow.upper(), 
+    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_nosharexy'.format(dow.upper(), 
                                                              tod.upper()))
     plt.tight_layout()
     plt.close()

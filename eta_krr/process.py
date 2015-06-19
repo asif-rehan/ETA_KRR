@@ -12,11 +12,13 @@ def solve_f(Q_arr, Lapl, y_vec_arr, reg_lambda):
     b = Q_arr.dot(y_vec_arr)
     f_vec = linalg.solve(A, b) 
     return f_vec
+
 def calc_rmse(y, y_pred):
     """inputs as arrays"""
     assert len(y) == len(y_pred)
     RMSE = mean_squared_error(y, y_pred)**0.5
     return  RMSE
+
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
     error_threshold = np.inf
