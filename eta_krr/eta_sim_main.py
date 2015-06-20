@@ -57,12 +57,13 @@ def crowd_density(train_len_indic_mat, link_len_vec):
     M= train_len_indic_mat.shape[0]
     mat = train_len_indic_mat.as_matrix()
     #cover = mat - link_len_vec  
-    count_redundancy_arr = np.zeros((M,1)) 
+    link_count_arr = np.zeros((M,1)) 
     for i in range(M):
         row = mat[i]
-        count_redundancy_arr[i] = len(row[row > 0]) - 1
-    avg_count_redundancy = count_redundancy_arr.mean()
-    return count_redundancy_arr, avg_count_redundancy
+        link_count_arr[i] = len(row[row > 0])
+    avg_count_redundancy = link_count_arr.mean()
+    link_count_arr_for_plot = link_count_arr-1
+    return link_count_arr_for_plot, avg_count_redundancy
 
 
 def get_metrics(test_pred_experience_time, test_experience_time,
@@ -76,12 +77,13 @@ def get_metrics(test_pred_experience_time, test_experience_time,
                                            test_exp_arr)[2]
     test_coeff_det = test_coeff_corr**2
     diff = test_pred_experience_time.flatten()-test_experience_time.as_matrix()
-    pct_diff = (test_pred_experience_time.flatten() - 
-                test_experience_time.as_matrix())/  \
-                test_experience_time.as_matrix()*100                                        
+    abs_diff = np.absolute(diff)
+    Mean_AD = abs_diff.mean()
+    Max_AD = abs_diff.max()
+    Min_AD = abs_diff.max()
     metrics =  test_rmse, test_coeff_corr, test_coeff_det, \
                diff.min(), diff.max(), diff.mean(),  \
-                pct_diff.min(), pct_diff.max(), pct_diff.mean()
+                Min_AD, Max_AD, Mean_AD
     return metrics
 
 def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
@@ -95,6 +97,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                                     onboard_time_max, 
                                                     overlap_max_minute, 
                                                     overlap_dir) 
+    N_train = int(train_link_indic_mat.shape[1])
     speed_vec_file = speed_vec_files_df.loc[
                                 (speed_vec_files_df['DOW']==speed_vec_dow) & 
                                 (speed_vec_files_df['TOD']==speed_vec_tod), 
@@ -117,6 +120,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                 train_experienced_time, 
                                 dow, tod, onboard_time_max, overlap_max_minute, 
                                 speed_vec_arr, optim_f_vec)
+    train_metrics = train_metrics + (N_train,)
     #==========================================================================
     #Test set
     #==========================================================================
@@ -128,12 +132,14 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                                         onboard_time_max, 
                                                         overlap_max_minute, 
                                                         1)
+    N_test = int(test_link_indic_mat.shape[1])
     test_pred_experience_time = process.predict_travel_time(optim_f_vec, 
                                                         1.0 / speed_vec_arr, 
                                             test_link_indic_mat.as_matrix())
     test_metrics = get_metrics(test_pred_experience_time, test_experience_time,
                                dow, tod, onboard_time_max, overlap_max_minute, 
                                speed_vec_arr, optim_f_vec)
+    test_metrics = test_metrics + (N_test,)
     #==========================================================================
     # make heatmap and scatterplot on test dataset
     #==========================================================================
@@ -145,6 +151,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
         for val_tod in val_tods:
             val_link_indic_mat = pkl.load(open(dow+'_'+val_tod+
                                                   '_len_indic_mat.p','rb'))
+            N_val = int(val_link_indic_mat.shape[1])
             val_experiece_time = pkl.load(open(dow+'_'+val_tod+
                                                '_hop_time.p','rb')) 
             val_pred_experience_time = process.predict_travel_time(optim_f_vec, 
@@ -155,7 +162,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                       dow, val_tod, onboard_time_max, 
                                       overlap_max_minute, speed_vec_arr, 
                                       optim_f_vec)
-            val_metrics_list.append((val_tod, val_metrics))
+            val_metrics_list.append((val_tod, val_metrics+(N_val,)))
     #==========================================================================
     # Redundancy 
     #==========================================================================
@@ -164,8 +171,6 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     
     speed_pred =  1.0/(1.0/speed_vec_arr + optim_f_vec).flatten()*2.236936
     a = plt.hist(speed_pred, label='Predicted Speed')
-
-    
     #2.236936 to convert m/s to mph
     #==========================================================================
     #congestion_heatmap(dow, tod, onboard_time_max,
@@ -193,9 +198,11 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                 'Actual_Max_OnBoardTime_minute',
                 'Sparsity', 
                 'Avg_Count_Redunt',
+                #get_metrics output below
                 'RMSE', 'Pearson_r', 'R_Squared', 
-                'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 'Min_Diff_pct', 
-                'Max_Diff_pct','Mean_Diff_pct']
+                'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 
+                'Min_Abs_Diff_sec', 'Max_Abs_Diff_sec','Mean_Abs_Diff_sec', 
+                'Number of Traces']
     output_df = pd.DataFrame(columns = columns)
     model_id = 0
     for tod, dow in seg:
@@ -235,7 +242,15 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                     row_df = pd.DataFrame([row], columns=columns)
                     output_df = output_df.append(row_df, ignore_index=True)
                 scat_plt_data.append((obd_max,sparsity(overlap_dir),
-                                      out[-4:-2], out[-2:]))
+                                out[-4:-2], out[-2:],
+                            [test_metrics[0],
+                             test_metrics[1],
+                             test_metrics[2],
+                             test_metrics[8], 
+                                             train_metrics[0],
+                                             train_metrics[1],
+                                             train_metrics[2],
+                                             train_metrics[8]]))
         scatter_plots(dow, tod,scat_plt_data)
     return output_df
 
@@ -281,7 +296,8 @@ def scatter_plots(dow, tod, scat_plt_data):
                              ncols=2)#, sharex=True, sharey=True)
     fig.set_size_inches(8, 10.5, forward=True)
     mpl.rcParams.update({'font.size': 8})
-    fig.suptitle('Predicted vs Actual Travel Time for Test Dataset\nIndividual Axes', fontsize=14)
+    fig.suptitle('Predicted vs Actual Travel Time for Test Dataset\n'+  \
+                 'Individual Axes for Each Plot', fontsize=14)
     #leg = []
     for i in range(len(scat_plt_data)):
         row = i//2
@@ -289,6 +305,16 @@ def scatter_plots(dow, tod, scat_plt_data):
         axes[row,col].scatter(scat_plt_data[i][2][0],
                               scat_plt_data[i][2][1], label='Test Data',
                               s=20, c='r', marker='<', alpha=0.40)
+        test_rmse       = round(scat_plt_data[i][4][0], 2)
+        test_pearson    = round(scat_plt_data[i][4][1], 2)
+        test_Rsq        = round(scat_plt_data[i][4][2], 2)
+        test_MAD        = round(scat_plt_data[i][4][2], 2)
+        plot_info = "Coeff of Corr, r = {}\n".format(test_pearson)+  \
+                    "Coeff of Det, R-sq = {}\n".format(test_Rsq)+   \
+                    "RMSE = {}(sec)\n".format(test_rmse)+  \
+                    "MAD = {}(sec)".format(test_MAD)
+        axes[row,col].text(0.05, 0.95, plot_info, ha='left', va='top', 
+                           transform=axes[row,col].transAxes)
         #tst = axes[row,col].scatter(scat_plt_data[i][3][0],
         #                      scat_plt_data[i][3][1], label='Train Data',
         #                      s=10, c='b', marker='>', alpha=0.6)
@@ -296,24 +322,26 @@ def scatter_plots(dow, tod, scat_plt_data):
         #    leg = [trn, tst]
         if col==1:
             axes[row,col].yaxis.set_label_position("right")
-            axes[row,col].set_ylabel(str(scat_plt_data[i][0])+'Minutes', 
-                                 rotation=270, labelpad= 10)
+            axes[row,col].set_ylabel(str(scat_plt_data[i][0])+' Minutes', 
+                                 rotation=270, labelpad= 12)
     #fig.legend(leg, ['Test Data','Train Data'],
     #              loc='upper center', bbox_to_anchor=(0.5, 0.5), ncol=2)    
-    fig.text(0.50, 0.04, 'Actual Time', ha='center', va='center',fontsize=10)
+    fig.text(0.50, 0.04, 'Actual Time (sec)', 
+             ha='center', va='center',fontsize=10)
     fig.text(0.30, 0.06, scat_plt_data[0][1], 
              ha='center', va='center',fontsize=9)
     fig.text(0.70, 0.06, scat_plt_data[1][1], 
              ha='center', va='center',fontsize=9)
-    fig.text(0.05, 0.5, 'Predicted Time', ha='center', va='center', 
+    fig.text(0.05, 0.5, 'Predicted Time (sec)', ha='center', va='center', 
              rotation='vertical',fontsize=10)
     fig.text(0.95, 0.5, 'Maximum On-board Time', ha='center', va='center', 
              rotation=270,fontsize=10)
     plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
                  ha='center', va='center')
     
-    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_nosharexy'.format(dow.upper(), 
-                                                             tod.upper()))
+    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_nosharexy'.format(
+                                                                dow.upper(), 
+                                                                tod.upper()))
     plt.tight_layout()
     plt.close()
     return None
@@ -347,13 +375,13 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
 
 #disagg(seg[0], 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
 #==============================================================================
-# for all-dow, afternoon 
+# for all-dow, afternoon
 #==============================================================================
 
 if __name__ == '__main__':
-    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['tue', 'wed', 'thu']]
+    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['tue','wed','thu']]
     allout= run_full_output(seg, max_onboard_time_conditions=[15, 10, 5])#,
                                 #val_tods=['mo', 'ev'])
     #==========================================================================
-    # allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT.csv')
+    allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT_thu.csv')
     #==========================================================================
