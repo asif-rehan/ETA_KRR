@@ -62,8 +62,8 @@ def crowd_density(train_len_indic_mat, link_len_vec):
         row = mat[i]
         link_count_arr[i] = len(row[row > 0])
     avg_count_redundancy = link_count_arr.mean()
-    link_count_arr_for_plot = link_count_arr-1
-    return link_count_arr_for_plot, avg_count_redundancy
+    link_cnt_minus_1_arr = link_count_arr-1
+    return link_cnt_minus_1_arr, avg_count_redundancy
 
 
 def get_metrics(test_pred_experience_time, test_experience_time,
@@ -291,13 +291,17 @@ def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag,
     plt.close()
     return None
 
-def scatter_plots(dow, tod, scat_plt_data):
+def scatter_plots(dow, tod, scat_plt_data, sharexy=True):
     fig, axes = plt.subplots(nrows=len(scat_plt_data)/2, 
-                             ncols=2)#, sharex=True, sharey=True)
+                             ncols=2, sharex=sharexy, sharey=sharexy)
     fig.set_size_inches(8, 10.5, forward=True)
     mpl.rcParams.update({'font.size': 8})
+    if sharexy == True:
+        title_sec_line = 'Same Axes for All Plots'
+    else:
+        title_sec_line = 'Individual Axes for Each Plot'
     fig.suptitle('Predicted vs Actual Travel Time for Test Dataset\n'+  \
-                 'Individual Axes for Each Plot', fontsize=14)
+                 title_sec_line, fontsize=14)
     #leg = []
     for i in range(len(scat_plt_data)):
         row = i//2
@@ -339,9 +343,10 @@ def scatter_plots(dow, tod, scat_plt_data):
     plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
                  ha='center', va='center')
     
-    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_nosharexy'.format(
+    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_sharexy_{2}'.format(
                                                                 dow.upper(), 
-                                                                tod.upper()))
+                                                                tod.upper(),
+                                                                sharexy))
     plt.tight_layout()
     plt.close()
     return None
