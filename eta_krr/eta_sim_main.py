@@ -39,8 +39,8 @@ onboard_time_max = 15
 overlap_max_minute = 15
 overlap_dir = 1    #or -1 for sparse
 lamb_min = 1
-lamb_max= 5000
-lamb_step = 1
+lamb_max= 10000
+lamb_step = 10
 
 def crowd_density(train_len_indic_mat, link_len_vec):
     """Measures redundancy measures of the crowd-sourced data
@@ -72,9 +72,8 @@ def get_metrics(test_pred_experience_time, test_experience_time,
     test_rmse = process.calc_rmse(test_pred_experience_time, 
                                   test_experience_time.as_matrix())
     test_exp_arr = test_experience_time.as_matrix()
-    test_coeff_corr = stats.linregress(
-                                           test_pred_experience_time.flatten(),
-                                           test_exp_arr)[2]
+    test_coeff_corr = stats.linregress(test_pred_experience_time.flatten(),
+                                       test_exp_arr)[2]
     test_coeff_det = test_coeff_corr**2
     diff = test_pred_experience_time.flatten()-test_experience_time.as_matrix()
     abs_diff = np.absolute(diff)
@@ -83,8 +82,24 @@ def get_metrics(test_pred_experience_time, test_experience_time,
     Min_AD = abs_diff.max()
     metrics =  test_rmse, test_coeff_corr, test_coeff_det, \
                diff.min(), diff.max(), diff.mean(),  \
-                Min_AD, Max_AD, Mean_AD
+               Min_AD, Max_AD, Mean_AD
     return metrics
+
+
+def plot_speed_hist(dow, tod, onboard_time_max, overlap_dir, sparsity, speed_pred):
+    plt.hist(speed_pred, label='Predicted Speed')
+    plt.title('Predicted Speed Histogram')
+    plt.figtext(0.5, 0.925, 
+                 'Overlap:'+sparsity(overlap_dir)+  \
+                 '    '+'Day of Week: '+dow.upper()+  \
+                 '    '+'Max Onboard Time (Min): '+str(onboard_time_max), 
+                 ha='center', va='center')
+    plt.xlabel('Predicted Speed (mph)')
+    plt.ylabel('Count')
+    plt.savefig('../_files/eta_krr_plots/10sec/{}_{}_{}_{}_clipped'.format(
+                                dow.upper(), tod.upper(), onboard_time_max, 
+                                sparsity(overlap_dir)))
+    plt.close()
 
 def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                overlap_max_minute, speed_vec_dow, speed_vec_tod):
@@ -110,6 +125,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     # make LOO CV plot here
     #==========================================================================
+    plotting(dow, tod, opt_lambda, overlap_dir, err_log)
     #==========================================================================
     # make heatmap and scatterplot on train dataset
     #==========================================================================
@@ -140,6 +156,7 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
                                dow, tod, onboard_time_max, overlap_max_minute, 
                                speed_vec_arr, optim_f_vec)
     test_metrics = test_metrics + (N_test,)
+    
     #==========================================================================
     # make heatmap and scatterplot on test dataset
     #==========================================================================
@@ -169,13 +186,15 @@ def inner_loop(dow, tod, onboard_time_max, overlap_dir, val_tods,
     train_count_redunt, train_avg_redun = crowd_density(train_link_indic_mat,
                                                         link_len_vec) 
     
+    sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
+                                                        else 'Continuous'
     speed_pred =  1.0/(1.0/speed_vec_arr + optim_f_vec).flatten()*2.236936
-    a = plt.hist(speed_pred, label='Predicted Speed')
+    plot_speed_hist(dow, tod, onboard_time_max, overlap_dir, sparsity, speed_pred)
     #2.236936 to convert m/s to mph
     #==========================================================================
-    #congestion_heatmap(dow, tod, onboard_time_max,
-    #                    val_tod, overlap_dir, speed_pred, 
-    #                   train_count_redunt.flatten())
+    congestion_heatmap(dow, tod, onboard_time_max,
+                        val_tod, overlap_dir, speed_pred, 
+                       train_count_redunt.flatten())
     
     return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
@@ -251,7 +270,8 @@ def run_full_output(seg, max_onboard_time_conditions=[15,10,5],
                                              train_metrics[1],
                                              train_metrics[2],
                                              train_metrics[8]]))
-        scatter_plots(dow, tod,scat_plt_data)
+        scatter_plots(dow, tod,scat_plt_data,sharexy=True)
+        scatter_plots(dow, tod,scat_plt_data,sharexy=False)
     return output_df
 
 def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag, 
@@ -284,10 +304,10 @@ def congestion_heatmap(dow, tod, obt, val_tod, overlap_dir_tag,
                  '    '+'Day of Week: '+dow.upper()+  \
                  '    '+'Max Onboard Time (Min): '+str(obt), 
                  ha='center', va='center')
-    fig.savefig('../_files/eta_krr_plots/{}_{}_{}_{}_clipped'.format(dow.upper(), 
-                                                             tod.upper(), obt,
-                                                    sparsity(overlap_dir_tag)),
-                )
+    fig.savefig('../_files/eta_krr_plots/10sec/{}_{}_{}_{}_clipped'.format(
+                                                            dow.upper(), 
+                                                            tod.upper(), obt,
+                                                    sparsity(overlap_dir_tag)))
     plt.close()
     return None
 
@@ -341,9 +361,8 @@ def scatter_plots(dow, tod, scat_plt_data, sharexy=True):
     fig.text(0.95, 0.5, 'Maximum On-board Time', ha='center', va='center', 
              rotation=270,fontsize=10)
     plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
-                 ha='center', va='center')
-    
-    fig.savefig('../_files/eta_krr_plots/scat_sec_{0}_{1}_sharexy_{2}'.format(
+                 ha='center', va='center')    
+    fig.savefig('../_files/eta_krr_plots/10sec/scat_sec_{0}_{1}_sharexy_{2}'.format(
                                                                 dow.upper(), 
                                                                 tod.upper(),
                                                                 sharexy))
@@ -351,13 +370,7 @@ def scatter_plots(dow, tod, scat_plt_data, sharexy=True):
     plt.close()
     return None
 
-def plotting(dow, tod, test_experience_time, test_pred_experience_time,
-             opt_lambda, overlap_dir_tag, corr_coef, err_log, 
-             speed_vec_df, optim_f_vec):
-    fig, ax, ttl = scatter_plots(dow, tod, test_experience_time, 
-                                 test_pred_experience_time, opt_lambda, 
-                                 overlap_dir_tag, corr_coef)
-    
+def plotting(dow, tod, opt_lambda, overlap_dir_tag, err_log):
     fig = plt.figure()
     ax = plt.axes()
     lambda_values, errors = zip(*err_log)
@@ -371,11 +384,9 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
     plt.ylabel('LOOCV Error')
     plt.axhline(min([err[1] for err in err_log]), color='r', ls='--')
     plt.axvline(opt_lambda, color='r', ls='--')
-    plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
+    plt.show()
+#   plt.savefig('../_files/eta_krr_plots/{0}'.format(ttl))
     plt.close()
-    
-    congestion_heatmap(dow, tod, overlap_dir_tag, speed_vec_df, 
-                       optim_f_vec, fig, ax)
     return None
 
 #disagg(seg[0], 1).to_csv(r'../_files/eta_krr_plots/disagg_summary_all.csv')
@@ -384,9 +395,9 @@ def plotting(dow, tod, test_experience_time, test_pred_experience_time,
 #==============================================================================
 
 if __name__ == '__main__':
-    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['tue','wed','thu']]
-    allout= run_full_output(seg, max_onboard_time_conditions=[15, 10, 5])#,
-                                #val_tods=['mo', 'ev'])
+    seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['wed', 'tue','thu']]
+    allout= run_full_output(seg, max_onboard_time_conditions=[15, 10, 5],
+                                val_tods=['mo', 'ev'])
     #==========================================================================
-    allout.to_csv('../_files/eta_krr_plots/ALLOUTPUT_thu.csv')
+    allout.to_csv('../_files/eta_krr_plots/10sec/ALLOUTPUT_10sec.csv')
     #==========================================================================
