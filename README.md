@@ -1,4 +1,4 @@
-# ETA_KRRETA_KRR
+# ETA_KRR
 
 All crowd-sourcing simulation, prediction and related plotting tools
 
