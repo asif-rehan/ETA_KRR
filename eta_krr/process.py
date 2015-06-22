@@ -19,10 +19,9 @@ def calc_rmse(y, y_pred):
     RMSE = mean_squared_error(y, y_pred)**0.5
     return  RMSE
 
-def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
-                    min_lambda, max_lambda, increment, fast=True):
+def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
     eig_vals = linalg.eigvalsh(np.dot(Q_arr, Q_arr.T))
-    min_lambda = max(min(eig_vals), 0)
+    min_lambda = max(min(eig_vals), 0.1)
     max_lambda = max(eig_vals)
     
     error_threshold = np.inf
@@ -71,8 +70,7 @@ def validate(y_test_vec_arr, pred_y_vec_arr):
     diff = pred_y_vec_arr - y_test_vec_arr
     return diff
 
-def build_model(Q_df, y_vec_df, speed_vec_arr, Lapl, 
-                min_lambda, max_lambda, increment):
+def build_model(Q_df, y_vec_df, speed_vec_arr, Lapl):
     """
     y_vec_df : onbrd_experienced_time vector in pandas.DF
     y_dev_arr : vector after subtracting avg_onboard_experience_time
@@ -87,11 +85,11 @@ def build_model(Q_df, y_vec_df, speed_vec_arr, Lapl,
     inv_speed_vec = 1.0 / speed_vec_arr
     y_dev_vec_arr = y_vec_arr - Q_arr.T.dot(inv_speed_vec)
     
-    optim_lambda, error_log = optimize_lambda(N, Q_arr, y_dev_vec_arr, Lapl, 
-                                 min_lambda, max_lambda, increment)
+    optim_lambda, error_log, min_lambda, max_lambda = optimize_lambda(N, Q_arr,
+                                                        y_dev_vec_arr, Lapl)
     
     optim_f_vec = solve_f(Q_arr, Lapl, y_dev_vec_arr, optim_lambda)
-    return optim_f_vec, optim_lambda, error_log
+    return optim_f_vec, optim_lambda, error_log, min_lambda, max_lambda
     
 def main(Q_arr, y_vec_df, speed_vec_files_df, Lapl, 
          min_lambda, max_lambda, increment, optim, 
