@@ -84,7 +84,7 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     # make LOO CV plot here
     #==========================================================================
-    plotting(Freq, dow, tod, opt_lambda, overlap_dir, err_log, onboard_time_max)
+    #plotting(Freq, dow, tod, opt_lambda, overlap_dir, err_log, onboard_time_max)
     #==========================================================================
     # make heatmap and scatterplot on train dataset
     #==========================================================================
@@ -155,14 +155,14 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     pred_median_sp = np.median(speed_pred)
     pred_speed_over_pred = len(speed_pred[speed_pred > 100])
     pred_speed_under_pred = len(speed_pred[speed_pred < 0])
-    plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir, sparsity, 
-                    speed_pred)
+    #plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir, sparsity, 
+    #                speed_pred)
     #2.236936 to convert m/s to mph
     #==========================================================================
-    for clip in [None, 100]:
-        congestion_heatmap(Freq, dow, tod, onboard_time_max,
-                        val_tod, overlap_dir, speed_pred, 
-                       train_count_redunt.flatten(), clipped_upper=clip)
+    #for clip in [None, 100]:
+    #    congestion_heatmap(Freq, dow, tod, onboard_time_max,
+    #                    val_tod, overlap_dir, speed_pred, 
+    #                   train_count_redunt.flatten(), clipped_upper=clip)
     
     return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
@@ -252,8 +252,8 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                                              train_metrics[1],
                                              train_metrics[2],
                                              train_metrics[8]]))
-        scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
-        scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
+        #scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
+        #scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
     return output_df
 
 def congestion_heatmap(Freq, dow, tod, obt, val_tod, overlap_dir_tag, 
@@ -433,7 +433,7 @@ if __name__ == '__main__':
     lamb_min = 1
     lamb_max= 10000
     lamb_step = 10
-    for Freq in [30, 60]: 
+    for Freq in [60, 30]: 
         src_fldr = os.path.join(this_dir, 
                     r'../_files/files_for_ETA_simulation/{}sec'.format(Freq))
         road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files')) 
@@ -446,5 +446,5 @@ if __name__ == '__main__':
         allout= run_full_output(Freq,seg, max_onboard_time_conditions=[15, 10, 5],
                                     val_tods=['mo', 'ev'])
         #==========================================================================
-        allout.to_csv(
-            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec.csv'.format(Freq))   
+        #allout.to_csv(
+        #    '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec.csv'.format(Freq))   

@@ -21,6 +21,12 @@ def calc_rmse(y, y_pred):
 
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
+        
+    w, v = linalg.eig(np.dot(Q_arr, Q_arr.T))
+    min_lambda = min(w)
+    max_lambda = max(w)
+    print 'min_lambda = ', min_lambda
+    print 'max_lambda = ', max_lambda
     error_threshold = np.inf
     error_log = []
     for lambda_now in np.arange(min_lambda, max_lambda, increment):
