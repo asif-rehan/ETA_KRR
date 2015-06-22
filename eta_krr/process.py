@@ -21,15 +21,14 @@ def calc_rmse(y, y_pred):
 
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, 
                     min_lambda, max_lambda, increment, fast=True):
-        
-    w, v = linalg.eig(np.dot(Q_arr, Q_arr.T))
-    min_lambda = min(w)
-    max_lambda = max(w)
-    print 'min_lambda = ', min_lambda
-    print 'max_lambda = ', max_lambda
+    eig_vals = linalg.eigvalsh(np.dot(Q_arr, Q_arr.T))
+    min_lambda = max(min(eig_vals), 0)
+    max_lambda = max(eig_vals)
+    
     error_threshold = np.inf
     error_log = []
-    for lambda_now in np.arange(min_lambda, max_lambda, increment):
+    for lambda_now in np.linspace(min_lambda, max_lambda, 
+                                  num=max_lambda/10000):
         if fast:
             try:
                 error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
@@ -41,7 +40,7 @@ def optimize_lambda(N, Q_arr, y_vec_arr, Lapl,
         if error < error_threshold:
             LOOCV_argmin_lambda = lambda_now
             error_threshold = error
-    return LOOCV_argmin_lambda, error_log 
+    return LOOCV_argmin_lambda, error_log, min_lambda, max_lambda 
 
 def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
     I = np.identity(N)
