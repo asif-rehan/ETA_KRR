@@ -123,13 +123,13 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
     return mean_speed_vec, speed_storage
 
 
-def main(seg):
-    src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
-        r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
-    node_files = [f for f in os.listdir(os.path.join(src_fldr, 'node_files')) if 
-        os.path.isfile(os.path.join(src_fldr, 'node_files', f))]
-    road_files = [f for f in os.listdir(os.path.join(src_fldr, 'road_files')) if 
-        os.path.isfile(os.path.join(src_fldr, 'road_files', f))]
+def main(seg, src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
+        r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')):
+    
+    node_files = [f for f in os.listdir(os.path.join(src_fldr, 'node_files')) 
+                  if os.path.isfile(os.path.join(src_fldr, 'node_files', f))]
+    road_files = [f for f in os.listdir(os.path.join(src_fldr, 'road_files')) 
+                  if os.path.isfile(os.path.join(src_fldr, 'road_files', f))]
     nd_rd_pair_files = zip(node_files, road_files)
     n_road = 177
     max_speed_limit = 30 #mps ~= 65mph
@@ -143,7 +143,11 @@ def main(seg):
         #to obtain speed vector for across either of (all_dow && all tod) 
         #change selection condition 
         #======================================================================
-        select = files_df.loc[(files_df['DOW']==dow) & (files_df['TOD']==tod)]
+        if dow == 'all':
+            select = files_df.loc[files_df['TOD']==tod]
+        else:
+            select = files_df.loc[(files_df['DOW']==dow) & 
+                                  (files_df['TOD']==tod)]
         nd_rd_pair_files = zip(select.node_file, select.road_file)
         sp_vec, speed_stor = speed_vector(src_fldr, nd_rd_pair_files, 
             n_road, max_speed_limit)
