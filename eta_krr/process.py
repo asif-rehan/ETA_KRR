@@ -31,7 +31,7 @@ def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
     
     error_threshold = np.inf
     error_log = []
-    for lambda_now in xfrange(min_lambda, max_lambda, 10):
+    for lambda_now in xfrange(min_lambda, max_lambda, max_lambda/10000):
         if fast:
             try:
                 error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
