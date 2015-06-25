@@ -54,9 +54,10 @@ def get_metrics(test_pred_experience_time, test_experience_time,
     Mean_AD = abs_diff.mean()
     Max_AD = abs_diff.max()
     Min_AD = abs_diff.max()
+    MAPE = abs(diff.astype('float')/test_experience_time).mean()*100
     metrics =  test_rmse, test_coeff_corr, test_coeff_det, \
                diff.min(), diff.max(), diff.mean(),  \
-               Min_AD, Max_AD, Mean_AD
+               Min_AD, Max_AD, Mean_AD, MAPE
     return metrics
 
 def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
@@ -85,8 +86,10 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     # make LOO CV plot here
     #==========================================================================
+    #==========================================================================
     plotting(Freq, dow, tod, opt_lambda, min_lambda, max_lambda,
-             overlap_dir, err_log, onboard_time_max)
+              overlap_dir, err_log, onboard_time_max)
+    #==========================================================================
     #==========================================================================
     # make heatmap and scatterplot on train dataset
     #==========================================================================
@@ -157,15 +160,17 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     pred_median_sp = np.median(speed_pred)
     pred_speed_over_pred = len(speed_pred[speed_pred > 100])
     pred_speed_under_pred = len(speed_pred[speed_pred < 0])
-    plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir, sparsity, 
-                    speed_pred)
-    #2.236936 to convert m/s to mph
     #==========================================================================
+    plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir, sparsity, 
+                     speed_pred)
+    # #2.236936 to convert m/s to mph
+    # #==========================================================================
     for clip in [None, 100]:
         congestion_heatmap(Freq, dow, tod, onboard_time_max,
-                        val_tod, overlap_dir, speed_pred, 
-                       train_count_redunt.flatten(), clipped_upper=clip)
-    
+                         val_tod, overlap_dir, speed_pred, 
+                        train_count_redunt.flatten(), clipped_upper=clip)
+     
+    #==========================================================================
     return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
             train_experienced_time.mean()/60,  \
@@ -195,65 +200,69 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                 'RMSE', 'Pearson_r', 'R_Squared', 
                 'Min_Diff_sec', 'Max_Diff_sec','Mean_Diff_sec', 
                 'Min_Abs_Diff_sec', 'Max_Abs_Diff_sec','Mean_Abs_Diff_sec', 
-                'Number of Traces', 'Avg_Trace_length_m']
+                'MAPE_sec',
+                'Number_of_Traces', 'Avg_Trace_length_m']
     output_df = pd.DataFrame(columns = columns)
     model_id = 0
-    for tod, dow in seg:
-        scat_plt_data = []
-        for obd_max in  max_onboard_time_conditions:
-            for overlap_dir in [1, -1]:
-                model_id += 1
-                overlap_max_minute = obd_max
-                out = inner_loop(Freq,dow, tod, obd_max, overlap_dir, val_tods,
-                                                     overlap_max_minute,
-                                                     speed_vec_dow, 
-                                                     speed_vec_tod)
-                opt_lam             = out[0]
-                avg_cnt_redun       = out[1]
-                train_metrics       = out[2]  
-                test_metrics        = out[3]
-                val_metrics_list    = out[4]
-                mean_actual_exp_time= out[5]
-                min_actual_exp_time = out[6]
-                max_actual_exp_time = out[7]
-                pred_median_sp      = out[8] 
-                pred_speed_over_pred= out[9] 
-                pred_speed_under_pred= out[10]
-                sparsity = lambda overlap_dir: 'Sparse' if overlap_dir==-1  \
-                                                        else 'Continuous'
-                for (metrics, dat) in [(train_metrics, 'Train'),
-                                   (test_metrics, 'Test')]:
-                    row = [model_id, dat, tod, dow, opt_lam, 
-                           obd_max, mean_actual_exp_time, min_actual_exp_time,
-                           max_actual_exp_time, 
-                           pred_median_sp, 
-                           pred_speed_over_pred, 
-                           pred_speed_under_pred,
-                           sparsity(overlap_dir), 
-                           avg_cnt_redun] + list(metrics)
-                    row_df = pd.DataFrame([row], columns=columns)
-                    output_df = output_df.append(row_df, ignore_index=True)
-                for (val_tod, metrics) in val_metrics_list:
-                    row = [model_id,'Validation', val_tod,dow, 
-                           opt_lam,obd_max,  mean_actual_exp_time, 
-                           min_actual_exp_time,
-                           max_actual_exp_time,
-                           pred_median_sp, 
-                           pred_speed_over_pred, 
-                           pred_speed_under_pred,sparsity(overlap_dir), 
-                           avg_cnt_redun] + list(metrics)
-                    row_df = pd.DataFrame([row], columns=columns)
-                    output_df = output_df.append(row_df, ignore_index=True)
-                scat_plt_data.append((obd_max,sparsity(overlap_dir),
-                                out[-4:-2], out[-2:],
-                            [test_metrics[0],
-                             test_metrics[1],
-                             test_metrics[2],
-                             test_metrics[8], 
-                                             train_metrics[0],
-                                             train_metrics[1],
-                                             train_metrics[2],
-                                             train_metrics[8]]))
+    for r in range(repeat):
+        for tod, dow in seg:
+            scat_plt_data = []
+            for obd_max in  max_onboard_time_conditions:
+                for overlap_dir in [1, -1]:
+                    model_id += 1
+                    overlap_max_minute = obd_max
+                    out = inner_loop(Freq,dow, tod, obd_max, overlap_dir, 
+                                                        val_tods,
+                                                        overlap_max_minute,
+                                                        speed_vec_dow, 
+                                                        speed_vec_tod)
+                    opt_lam             = out[0]
+                    avg_cnt_redun       = out[1]
+                    train_metrics       = out[2]  
+                    test_metrics        = out[3]
+                    val_metrics_list    = out[4]
+                    mean_actual_exp_time= out[5]
+                    min_actual_exp_time = out[6]
+                    max_actual_exp_time = out[7]
+                    pred_median_sp      = out[8] 
+                    pred_speed_over_pred= out[9] 
+                    pred_speed_under_pred= out[10]
+                    sparsity= lambda overlap_dir:'Sparse' if overlap_dir==-1  \
+                                                    else 'Continuous'
+                    for (metrics, dat) in [(train_metrics, 'Train'),
+                                       (test_metrics, 'Test')]:
+                        row = [model_id, dat, tod, dow, opt_lam, 
+                               obd_max, mean_actual_exp_time, 
+                               min_actual_exp_time,
+                               max_actual_exp_time, 
+                               pred_median_sp, 
+                               pred_speed_over_pred, 
+                               pred_speed_under_pred,
+                               sparsity(overlap_dir), 
+                               avg_cnt_redun] + list(metrics)
+                        row_df = pd.DataFrame([row], columns=columns)
+                        output_df = output_df.append(row_df, ignore_index=True)
+                    for (val_tod, metrics) in val_metrics_list:
+                        row = [model_id,'Validation', val_tod,dow, 
+                               opt_lam,obd_max,  mean_actual_exp_time, 
+                               min_actual_exp_time,
+                               max_actual_exp_time,
+                               pred_median_sp, 
+                               pred_speed_over_pred, 
+                               pred_speed_under_pred,sparsity(overlap_dir), 
+                               avg_cnt_redun] + list(metrics)
+                        row_df = pd.DataFrame([row], columns=columns)
+                        output_df = output_df.append(row_df, ignore_index=True)
+                    scat_plt_data.append((obd_max,sparsity(overlap_dir),
+                                    out[-4:-2], out[-2:],
+                                [test_metrics[0],
+                                 test_metrics[1],
+                                 test_metrics[2],
+                                 test_metrics[8], 
+                                                 train_metrics[0],
+                                                 train_metrics[1],
+                                                 train_metrics[2],
+                                                 train_metrics[8]]))
         scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
         scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
     return output_df
@@ -440,7 +449,7 @@ if __name__ == '__main__':
     lamb_min = 1
     lamb_max= 10000
     lamb_step = 10
-    for Freq in [30, 60]: 
+    for Freq in [10]: 
         src_fldr = os.path.join(this_dir, 
                     r'../_files/files_for_ETA_simulation/{}sec'.format(Freq))
         road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files')) 
@@ -450,8 +459,9 @@ if __name__ == '__main__':
                                    columns=['route', 'DOW', 'TOD', 'road_file'])
         seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['wed', 'tue','thu']]
         sp_vec_main([('af', 'all')], src_fldr)
-        allout= run_full_output(Freq,seg, max_onboard_time_conditions=[15, 10, 5],
-                                    val_tods=['mo', 'ev'])
+        allout= run_full_output(Freq,seg, 
+                                max_onboard_time_conditions=[15, 10])#, 5],
+                                #val_tods=['mo', 'ev'], repeat=10)
         #==========================================================================
         allout.to_csv(
-            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec.csv'.format(Freq))   
+            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_{0}x_2.csv'.format(Freq))   

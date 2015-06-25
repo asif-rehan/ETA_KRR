@@ -19,15 +19,19 @@ def calc_rmse(y, y_pred):
     RMSE = mean_squared_error(y, y_pred)**0.5
     return  RMSE
 
+def xfrange(start, stop, step):
+    while start < stop:
+        yield start
+        start += step
+        
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
-    eig_vals = linalg.eigvalsh(np.dot(Q_arr, Q_arr.T))
+    eig_vals = linalg.eigvalsh(np.dot(Q_arr,np.dot(Q_arr.T, linalg.inv(Lapl))))
     min_lambda = max(min(eig_vals), 0.1)
     max_lambda = max(eig_vals)
     
     error_threshold = np.inf
     error_log = []
-    for lambda_now in np.linspace(min_lambda, max_lambda, 
-                                  num=max_lambda/10000):
+    for lambda_now in xfrange(min_lambda, max_lambda, 10):
         if fast:
             try:
                 error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
@@ -39,6 +43,7 @@ def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
         if error < error_threshold:
             LOOCV_argmin_lambda = lambda_now
             error_threshold = error
+    print error_threshold
     return LOOCV_argmin_lambda, error_log, min_lambda, max_lambda 
 
 def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
