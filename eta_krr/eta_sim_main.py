@@ -258,11 +258,13 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                                 [test_metrics[0],
                                  test_metrics[1],
                                  test_metrics[2],
-                                 test_metrics[8], 
+                                 test_metrics[8],
+                                 test_metrics[9], 
                                                  train_metrics[0],
                                                  train_metrics[1],
                                                  train_metrics[2],
-                                                 train_metrics[8]]))
+                                                 train_metrics[8],
+                                                 train_metrics[9],]))
         scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
         scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
     return output_df
@@ -330,11 +332,13 @@ def scatter_plots(Freq, dow, tod, scat_plt_data, sharexy=True):
         test_rmse       = round(scat_plt_data[i][4][0], 2)
         test_pearson    = round(scat_plt_data[i][4][1], 2)
         test_Rsq        = round(scat_plt_data[i][4][2], 2)
-        test_MAD        = round(scat_plt_data[i][4][2], 2)
+        test_MAD        = round(scat_plt_data[i][4][3], 2)
+        test_MAPE       = round(scat_plt_data[i][4][4], 2)
         plot_info = "Coeff of Corr, r = {}\n".format(test_pearson)+  \
                     "Coeff of Det, R-sq = {}\n".format(test_Rsq)+   \
                     "RMSE = {}(sec)\n".format(test_rmse)+  \
-                    "MAD = {}(sec)".format(test_MAD)
+                    "MAD = {}(sec)".format(test_MAD)+   \
+                    "MAPE = {}(sec)".format(test_MAPE)
         axes[row,col].text(0.05, 0.95, plot_info, ha='left', va='top', 
                            transform=axes[row,col].transAxes)
         #tst = axes[row,col].scatter(scat_plt_data[i][3][0],
@@ -449,7 +453,7 @@ if __name__ == '__main__':
     lamb_min = 1
     lamb_max= 10000
     lamb_step = 10
-    for Freq in [10]: 
+    for Freq in [10,30,60]: 
         src_fldr = os.path.join(this_dir, 
                     r'../_files/files_for_ETA_simulation/{}sec'.format(Freq))
         road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files')) 
@@ -460,8 +464,8 @@ if __name__ == '__main__':
         seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['wed', 'tue','thu']]
         sp_vec_main([('af', 'all')], src_fldr)
         allout= run_full_output(Freq,seg, 
-                                max_onboard_time_conditions=[15, 10])#, 5],
-                                #val_tods=['mo', 'ev'], repeat=10)
+                                max_onboard_time_conditions=[15, 10, 5],
+                                val_tods=['mo', 'ev'], repeat=10)
         #==========================================================================
         allout.to_csv(
-            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_{0}x_2.csv'.format(Freq))   
+            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_{0}x_3.csv'.format(Freq))   

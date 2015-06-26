@@ -25,13 +25,13 @@ def xfrange(start, stop, step):
         start += step
         
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
-    eig_vals = linalg.eigvalsh(np.dot(Q_arr,np.dot(Q_arr.T, linalg.inv(Lapl))))
+    eig_vals = linalg.eigvalsh(np.dot(Q_arr,Q_arr.T))
     min_lambda = max(min(eig_vals), 0.1)
     max_lambda = max(eig_vals)
     
     error_threshold = np.inf
     error_log = []
-    for lambda_now in xfrange(min_lambda, max_lambda, max_lambda/10000):
+    for lambda_now in np.linspace(min_lambda, max_lambda, 10000):
         if fast:
             try:
                 error = fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, lambda_now)
