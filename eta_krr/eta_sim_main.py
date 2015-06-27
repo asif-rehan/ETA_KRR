@@ -186,7 +186,7 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
 def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5], 
                     speed_vec_dow='all',speed_vec_tod='af', 
                     val_tods=['mo', 'ev'],repeat=1):    
-    columns = ['Model_ID', 'Dataset', 'TOD', 'DOW',
+    columns = ['Model_ID', 'GPS_Freq','Dataset', 'TOD', 'DOW',
                 'Lambda', 'Max_OnBoardTime_minute', 
                 'Actual_Mean_OnBoardTime_minute',
                 'Actual_Min_OnBoardTime_minute',
@@ -231,7 +231,7 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                                                     else 'Continuous'
                     for (metrics, dat) in [(train_metrics, 'Train'),
                                        (test_metrics, 'Test')]:
-                        row = [model_id, dat, tod, dow, opt_lam, 
+                        row = [model_id, Freq, dat, tod, dow, opt_lam, 
                                obd_max, mean_actual_exp_time, 
                                min_actual_exp_time,
                                max_actual_exp_time, 
@@ -243,7 +243,7 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                         row_df = pd.DataFrame([row], columns=columns)
                         output_df = output_df.append(row_df, ignore_index=True)
                     for (val_tod, metrics) in val_metrics_list:
-                        row = [model_id,'Validation', val_tod,dow, 
+                        row = [model_id,Freq, 'Validation', val_tod,dow, 
                                opt_lam,obd_max,  mean_actual_exp_time, 
                                min_actual_exp_time,
                                max_actual_exp_time,
@@ -265,8 +265,8 @@ def run_full_output(Freq,seg, max_onboard_time_conditions=[15,10,5],
                                                  train_metrics[2],
                                                  train_metrics[8],
                                                  train_metrics[9],]))
-        scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
-        scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
+            scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=True)
+            scatter_plots(Freq, dow, tod,scat_plt_data,sharexy=False)
     return output_df
 
 def congestion_heatmap(Freq, dow, tod, obt, val_tod, overlap_dir_tag, 
@@ -337,7 +337,7 @@ def scatter_plots(Freq, dow, tod, scat_plt_data, sharexy=True):
         plot_info = "Coeff of Corr, r = {}\n".format(test_pearson)+  \
                     "Coeff of Det, R-sq = {}\n".format(test_Rsq)+   \
                     "RMSE = {}(sec)\n".format(test_rmse)+  \
-                    "MAD = {}(sec)".format(test_MAD)+   \
+                    "MAD = {}(sec)\n".format(test_MAD)+   \
                     "MAPE = {}(sec)".format(test_MAPE)
         axes[row,col].text(0.05, 0.95, plot_info, ha='left', va='top', 
                            transform=axes[row,col].transAxes)
@@ -468,4 +468,4 @@ if __name__ == '__main__':
                                 val_tods=['mo', 'ev'], repeat=10)
         #==========================================================================
         allout.to_csv(
-            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_{0}x_3.csv'.format(Freq))   
+            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_10x_3.csv'.format(Freq))   

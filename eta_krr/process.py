@@ -43,7 +43,6 @@ def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
         if error < error_threshold:
             LOOCV_argmin_lambda = lambda_now
             error_threshold = error
-    print error_threshold
     return LOOCV_argmin_lambda, error_log, min_lambda, max_lambda 
 
 def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
