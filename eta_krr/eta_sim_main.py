@@ -43,6 +43,9 @@ def crowd_density(train_len_indic_mat, link_len_vec):
 def get_metrics(test_pred_experience_time, test_experience_time,
                 dow, tod, onboard_time_max, overlap_max_minute, 
                 speed_vec_df, optim_f_vec):
+    '''
+    Calculates the performance metrics
+    '''
     test_rmse = process.calc_rmse(test_pred_experience_time, 
                                   test_experience_time.as_matrix())
     test_exp_arr = test_experience_time.as_matrix()
@@ -62,6 +65,8 @@ def get_metrics(test_pred_experience_time, test_experience_time,
 
 def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
                overlap_max_minute, speed_vec_dow, speed_vec_tod):
+    '''
+    '''
     train_link_indic_mat,train_experienced_time = crowd_source_simu(
                                                     rd_files_df,
                                                     src_fldr,
@@ -86,10 +91,8 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     #==========================================================================
     # make LOO CV plot here
     #==========================================================================
-    #==========================================================================
     plotting(Freq, dow, tod, opt_lambda, min_lambda, max_lambda,
               overlap_dir, err_log, onboard_time_max)
-    #==========================================================================
     #==========================================================================
     # make heatmap and scatterplot on train dataset
     #==========================================================================
@@ -160,17 +163,15 @@ def inner_loop(Freq,dow, tod, onboard_time_max, overlap_dir, val_tods,
     pred_median_sp = np.median(speed_pred)
     pred_speed_over_pred = len(speed_pred[speed_pred > 100])
     pred_speed_under_pred = len(speed_pred[speed_pred < 0])
-    #==========================================================================
     plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir, sparsity, 
                      speed_pred)
-    # #2.236936 to convert m/s to mph
-    # #==========================================================================
+    #2.236936 to convert m/s to mph
+    
     for clip in [None, 100]:
         congestion_heatmap(Freq, dow, tod, onboard_time_max,
-                         val_tod, overlap_dir, speed_pred, 
-                        train_count_redunt.flatten(), clipped_upper=clip)
-     
-    #==========================================================================
+                          val_tod, overlap_dir, speed_pred, 
+                         train_count_redunt.flatten(), clipped_upper=clip)
+  
     return opt_lambda, train_avg_redun, train_metrics, \
             test_metrics, val_metrics_list,  \
             train_experienced_time.mean()/60,  \
@@ -312,6 +313,17 @@ def congestion_heatmap(Freq, dow, tod, obt, val_tod, overlap_dir_tag,
     return None
 
 def scatter_plots(Freq, dow, tod, scat_plt_data, sharexy=True):
+    '''
+    predicted vs actual trip travel time scatter plot
+    
+    Inputs
+    ------ 
+    Freq: used to note on the top of the graph
+    dow : day of week
+    tod : time of day, morning, afternoon and evening
+    scat_plt_data : data to plot with metric data to write on the plot
+    
+    '''
     fig, axes = plt.subplots(nrows=len(scat_plt_data)/2, 
                              ncols=2, sharex=sharexy, sharey=sharexy)
     fig.set_size_inches(8, 10.5, forward=True)
@@ -360,7 +372,8 @@ def scatter_plots(Freq, dow, tod, scat_plt_data, sharexy=True):
              ha='center', va='center',fontsize=9)
     fig.text(0.05, 0.5, 'Predicted Time (sec)', ha='center', va='center', 
              rotation='vertical',fontsize=10)
-    fig.text(0.95, 0.5, 'Maximum On-board Time', ha='center', va='center', 
+    fig.text(0.95, 0.5, 'GPS Trace Duration Max Limit', 
+             ha='center', va='center', 
              rotation=270,fontsize=10)
     plt.figtext(0.5, 0.925, 'Day of Week: '+dow.upper(), 
                  ha='center', va='center')    
@@ -374,6 +387,13 @@ def scatter_plots(Freq, dow, tod, scat_plt_data, sharexy=True):
 
 def plotting(Freq, dow, tod, opt_lambda, min_lambda, max_lambda,
              overlap_dir_tag, err_log, onboard_time_max):
+    '''
+    makes the Error vs LOO CV plot 
+    
+    Input
+    -----
+    opt_lambda : optimum lambda which produces minimum error 
+    '''
     fig = plt.figure()
     ax = plt.axes()
     lambda_values, errors = zip(*err_log)
@@ -427,8 +447,8 @@ def plot_speed_hist(Freq, dow, tod, onboard_time_max, overlap_dir,
     plt.xlabel('Predicted Speed (mph)')
     plt.ylabel('Count')
     plt.savefig('../_files/eta_krr_plots/{}sec/speed_hist_{}_{}_{}_{}'.format(
-                                Freq, dow.upper(), tod.upper(), onboard_time_max, 
-                                sparsity(overlap_dir)))
+                            Freq, dow.upper(), tod.upper(), onboard_time_max, 
+                            sparsity(overlap_dir)))
     plt.close()
     
 if __name__ == '__main__':
@@ -464,8 +484,8 @@ if __name__ == '__main__':
         seg = [(TOD, DOW) for TOD in ['af'] for DOW in ['wed', 'tue','thu']]
         sp_vec_main([('af', 'all')], src_fldr)
         allout= run_full_output(Freq,seg, 
-                                max_onboard_time_conditions=[15, 10, 5],
-                                val_tods=['mo', 'ev'], repeat=10)
+                                max_onboard_time_conditions=[15, 10, 5])#,
+                                #val_tods=['mo', 'ev'], repeat=10)
         #==========================================================================
-        allout.to_csv(
-            '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_10x_3.csv'.format(Freq))   
+        #allout.to_csv(
+        #    '../_files/eta_krr_plots/{0}sec/ALLOUTPUT_{0}sec_10x_3.csv'.format(Freq))   

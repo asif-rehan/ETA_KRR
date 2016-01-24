@@ -8,6 +8,9 @@ from scipy import linalg
 from sklearn.metrics import mean_squared_error
 
 def solve_f(Q_arr, Lapl, y_vec_arr, reg_lambda):
+    '''
+    solve for the f-vector where the eqn is Af = b
+    '''
     A = Q_arr.dot(Q_arr.T) + reg_lambda*Lapl
     b = Q_arr.dot(y_vec_arr)
     f_vec = linalg.solve(A, b) 
@@ -25,6 +28,20 @@ def xfrange(start, stop, step):
         start += step
         
 def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
+    '''
+    Input
+    -----
+    N : number of trips, length of y_vec_arr
+    Lapl : Laplacian matrix of the line graph of the network
+    fast : chooses between two functions to calculate LOOCV error
+            if True : uses fast_LOOCV_cost()
+            if False : uses 
+    
+    returns
+    -------
+    LOOCV_argmin_lambda : optimum lambda creating least LOOCV error, 
+    error_log : returns a array whose rows are lambda and LOOCV error it causes
+    '''
     eig_vals = linalg.eigvalsh(np.dot(Q_arr,Q_arr.T))
     min_lambda = max(min(eig_vals), 0.1)
     max_lambda = max(eig_vals)
@@ -46,6 +63,9 @@ def optimize_lambda(N, Q_arr, y_vec_arr, Lapl, fast=True):
     return LOOCV_argmin_lambda, error_log, min_lambda, max_lambda 
 
 def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
+    '''
+    calculate LOOCV cost using analytical solution, so calculates it fast 
+    '''
     I = np.identity(N)
     inverted = linalg.inv(Q_arr.dot(Q_arr.T) + reg_lambda*Lapl)
     H = Q_arr.T.dot(inverted.dot(Q_arr))
@@ -56,6 +76,10 @@ def fast_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
     return avg_LOOCV_cost
 
 def slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
+    '''
+    calculate LOOCV cost using leave-one-out approach repeatedly
+    So calculation is slow 
+    '''
     LOOCV_cost = 0
     for n in xrange(N): 
         _Q_leave_n = np.delete(Q_arr, n, 1)
@@ -66,17 +90,28 @@ def slow_LOOCV_cost(N, Q_arr, y_vec_arr, Lapl, reg_lambda):
     return avg_LOOCV_cost 
 
 def predict_travel_time(optim_f_vec, speed_vec_arr, Q_test_arr):
-    """speed_vec_arr : vector of inverse avg speed"""
+    """
+    Input
+    -----
+    optim_f_vec : optimal solution from the solve_f()    
+    speed_vec_arr : vector of inverse avg speed
+    Q_test_arr : Q matrix for the test trajectories 
+    """
     state_inv_speed = optim_f_vec + speed_vec_arr
     return Q_test_arr.T.dot(state_inv_speed)
 
 def validate(y_test_vec_arr, pred_y_vec_arr):
+    '''
+    returns difference between predicted trip travel time and 
+    predicted ones for the test trips'''
     diff = pred_y_vec_arr - y_test_vec_arr
     return diff
 
 def build_model(Q_df, y_vec_df, speed_vec_arr, Lapl):
     """
+    Q_df : pandas.DF of training set of trajectories, which is the Q-matrix
     y_vec_df : onbrd_experienced_time vector in pandas.DF
+    speed_vec_arr : array with links speed values, the Phi^0 vector
     y_dev_arr : vector after subtracting avg_onboard_experience_time
             avg_onboard_experience_time = sum(links involved/avg link speed)
     """
@@ -98,6 +133,25 @@ def build_model(Q_df, y_vec_df, speed_vec_arr, Lapl):
 def main(Q_arr, y_vec_df, speed_vec_files_df, Lapl, 
          min_lambda, max_lambda, increment, optim, 
          Q_test_arr, y_test_vec_arr):
+    '''
+    This function is not used in process. Was written for testing purpose.
+    It builds the model and predicts the travel time for the test trajectories
+    
+    Input
+    -----
+    Q_arr : training trajectories (Q matrix) as an array 
+    y_vec_df : trajectory travel times for the training trajectories
+    speed_vec_arr : array with links speed values, the Phi^0 vector
+    Lapl : Laplacian matrix for the line graph of the network
+    min_lambda, max_lambda : search range for solution of the objective funcn
+    increment : steps within the search range
+    Q_test_arr : testing trajectories (Q matrix) as an array
+    y_test_vec_arr : trajectory travel times for the testing trajectories
+    
+    returns
+    -------
+    returns the diff of the testing and predicted travel time
+    '''
     optim_f_vec = build_model(Q_arr, y_vec_df, speed_vec_files_df, Lapl, 
                               min_lambda, max_lambda, increment)[0]
     speed_vec_arr = 1.0/ speed_vec_files_df
