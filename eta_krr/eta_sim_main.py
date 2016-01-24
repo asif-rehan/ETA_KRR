@@ -10,7 +10,7 @@ from scipy import stats, linalg
 import pickle as pkl
 from eta_krr import process
 from eta_krr.simulation_sampler import crowd_source_simu
-from eta_krr.speed_vector import main as sp_vec_main
+from eta_krr.speed_vector import main as sp_vec_main    
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from MM_AR_validation.validation import Validate as mm_val
