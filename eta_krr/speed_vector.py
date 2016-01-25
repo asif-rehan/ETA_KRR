@@ -125,6 +125,14 @@ def speed_vector(src_fldr, nd_rd_pair_files, n_road, max_speed_limit):
 
 def main(seg, src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
         r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')):
+    '''
+    Uses speed_vector function for selected TOD and DOW combo for testing 
+    Input
+    -----
+    n_road : num of links in the network
+    max_speed_limit : if GPS speed calculate from map-matching output is 
+                        larger than this practical speed limit (m/s), used this
+    '''
     
     node_files = [f for f in os.listdir(os.path.join(src_fldr, 'node_files')) 
                   if os.path.isfile(os.path.join(src_fldr, 'node_files', f))]
