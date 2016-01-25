@@ -10,12 +10,22 @@ from datetime import timedelta
 from random import randint
 
 def choose_offboard_ts(onboard_time_min, onboard_time_max, onboard_ts):
-    """May be also try Gaussian?"""
+    """chooses time when trip stops"""
     rand_onboard_time = randint(onboard_time_min*60, onboard_time_max*60) 
     offboard_ts = onboard_ts + timedelta(seconds=rand_onboard_time)
     return offboard_ts
 
 def next_agent_start_ts(overlap_max_minute, overlap_dir, offboard_ts):
+    '''
+    randomly select the time when the next trip starts
+    
+    Input
+    -----
+    overlap_dir : if -1, next trip starts no earlier than the time when 
+                    the current one stops. Ensures no overlapping of trips
+                  if +1, next trip starts no later than when the 
+                    current one stops. Ensures no sparsity of trips
+    '''
     rand_ovrlp_time = randint(0, overlap_max_minute*60)
     rand_overlap_tdelta = timedelta(seconds=rand_ovrlp_time)
     onboard_ts = offboard_ts - overlap_dir * rand_overlap_tdelta
@@ -24,6 +34,17 @@ def next_agent_start_ts(overlap_max_minute, overlap_dir, offboard_ts):
 def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road, 
                       onboard_time_min, onboard_time_max, 
                       overlap_max_minute, overlap_dir):
+    '''
+    Randomly generates trips using the existing map-matched GPS traces and 
+    also calculates the travel times. 
+    
+    Return
+    ------
+    len_indic_mat : link indicator matrix, i.e. Q matrix from these trips 
+                    trajectory travel time vector 
+    hop_time : pandas series providing the travel times for the trajectories in
+                      len_indic_mat
+    '''
     tod_dow_rd_files = rd_files_df.loc[(rd_files_df['DOW']==dow) &
                                (rd_files_df['TOD']==tod), 
                                'road_file'].values    
@@ -63,7 +84,24 @@ def crowd_source_simu(rd_files_df, src_fldr, tod, dow, n_road,
                                            overlap_dir, offboard_ts)
     return len_indic_mat, pd.Series(hop_time)
 
-def main():
+def main(n_road = 177, onboard_time_min = 4, onboard_time_max = 15, 
+         overlap_max_minute = 15, overlap_dir = 1,
+         TOD_list=['af', 'ev', 'mo'], DOW_list=['thu', 'tue', 'wed']):
+    '''
+    main function for simulating the randomly sampled GPS trajectories
+    It dumps the files in a folder (look at the last two "pkl.dump" folder)
+    
+    n_road  : number of links in the road network
+    onboard_time_min : minimum duration of sampled trajectories
+    onboard_time_max : maximum duration of sampled trajectories
+    overlap_max_minute : maximum time by which the the next trajectory can 
+                            start before or after the current trajectory
+    overlap_dir : if -1, next trip starts no earlier than the time when 
+                    the current one stops. Ensures no overlapping of trips
+                  if +1, next trip starts no later than when the 
+                    current one stops. Ensures no sparsity of trips
+            
+    '''
     src_fldr = os.path.join(r'C:\Users\asr13006\Google Drive\UConn MS', 
                         r'Py Codes\ETA_KRR\_files\files_for_ETA_simulation')
     road_files = [f for f in os.listdir(os.path.join(src_fldr,'road_files')) 
@@ -71,14 +109,9 @@ def main():
     store = [(f[12:14], f[15:18], f[19:21], f) for f in road_files]
     rd_files_df = pd.DataFrame(store, 
                                columns=['route', 'DOW', 'TOD', 'road_file'])
-    n_road = 177
-    onboard_time_min = 4
-    onboard_time_max = 15
-    overlap_max_minute = 15
-    overlap_dir = 1 #or -1 indicates how time-separate CS
     #route_set = set(['rd', 'bl', 'gr', 'yl', 'or', 'pl'])
-    seg = [(TOD, DOW) for TOD in ['af', 'ev', 'mo'] for 
-        DOW in ['thu', 'tue', 'wed']]
+    seg = [(TOD, DOW) for TOD in TOD_list for 
+        DOW in DOW_list]
     for tod, dow in seg:
         len_indic_mat, hop_time = crowd_source_simu(rd_files_df,
                                                     src_fldr,
